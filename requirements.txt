@@ -1,0 +1,7 @@
+# Tested direct runtime dependencies; transitive versions are pinned in constraints.txt.
+-c constraints.txt
+fastapi==0.161.1
+pydantic==2.14.1
+uvicorn==0.54.0
+psutil==7.2.2
+numpy==2.5.4
