@@ -35,10 +35,13 @@ export function findRoute(map,{origin,destination,accessibility='STANDARD',langu
 
 export function createQueue(store,auth,operations,consent,{now,map}) {
   const db=store.db;
-  const room=id=>db.prepare('SELECT * FROM rooms WHERE room_id=?').get(id) ?? fail('RESOURCE_UNAVAILABLE');
-  const visit=token=>db.prepare('SELECT * FROM visits WHERE token_id=?').get(token) ?? fail('RESOURCE_UNAVAILABLE');
-  const waiting=id=>db.prepare('SELECT * FROM visits WHERE room_id=? AND queue_rank IS NOT NULL ORDER BY queue_rank').all(id);
-  const current=id=>db.prepare("SELECT * FROM visits WHERE room_id=? AND queue_state='IN_CONSULTATION'").get(id);
+  const queries={room:db.prepare('SELECT * FROM rooms WHERE room_id=?'),visit:db.prepare('SELECT * FROM visits WHERE token_id=?'),
+    waiting:db.prepare('SELECT * FROM visits WHERE room_id=? AND queue_rank IS NOT NULL ORDER BY queue_rank'),
+    current:db.prepare("SELECT * FROM visits WHERE room_id=? AND queue_state='IN_CONSULTATION'")};
+  const room=id=>queries.room.get(id) ?? fail('RESOURCE_UNAVAILABLE');
+  const visit=token=>queries.visit.get(token) ?? fail('RESOURCE_UNAVAILABLE');
+  const waiting=id=>queries.waiting.all(id);
+  const current=id=>queries.current.get(id);
   function capacity(roomId) {
     if(db.prepare("SELECT COUNT(*) n FROM visits WHERE room_id=? AND queue_state NOT IN ('COMPLETED','CANCELLED')").get(roomId).n>=100) fail('QUEUE_CAPACITY_REACHED');
   }
@@ -49,10 +52,10 @@ export function createQueue(store,auth,operations,consent,{now,map}) {
     for(const [index,token] of order.entries()) db.prepare('UPDATE visits SET queue_rank=? WHERE room_id=? AND token_id=?').run(index+1,roomId,token);
   }
   function bump(roomId) {db.prepare('UPDATE rooms SET version=version+1 WHERE room_id=?').run(roomId);return room(roomId).version;}
-  function placement(value) {
+  function placement(value,hasCurrent) {
     if(value.queue_state==='IN_CONSULTATION') return {waiting_position:null,people_ahead:0};
     if(!waitingStates.includes(value.queue_state)) return {waiting_position:null,people_ahead:null};
-    return {waiting_position:value.queue_rank,people_ahead:value.queue_rank-1+(current(value.room_id)?1:0)};
+    return {waiting_position:value.queue_rank,people_ahead:value.queue_rank-1+((hasCurrent??Boolean(current(value.room_id)))?1:0)};
   }
   function result(value,status,versions,extra={}) {
     const position=placement(value),destination=room(value.room_id);
@@ -203,7 +206,7 @@ export function createQueue(store,auth,operations,consent,{now,map}) {
   function snapshot(roomId,operational) {
     const r=room(roomId),values=db.prepare("SELECT v.*,p.display_name FROM visits v JOIN patients p ON p.patient_id=v.patient_id WHERE v.room_id=? AND v.queue_state NOT IN ('COMPLETED','CANCELLED') ORDER BY v.queue_rank,v.created_at,v.visit_id").all(roomId);
     if(values.length>100) fail('DEPENDENCY_UNAVAILABLE');
-    const item=value=>({public_token:value.public_token,queue_state:value.queue_state,...placement(value),...(operational?{
+    const item=value=>({public_token:value.public_token,queue_state:value.queue_state,...placement(value,Boolean(active)),...(operational?{
       token_id:value.token_id,visit_id:value.visit_id,patient_id:value.patient_id,display_name:value.display_name}:{})});
     const active=values.find(value=>value.queue_state==='IN_CONSULTATION');
     let currentValue=active?item(active):null;

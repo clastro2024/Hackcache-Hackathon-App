@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { APP_ROOT, isWithin } from './config.js';
 import { openDatabase, StorageError, requireStorage } from './db.js';
 import { loadRuntimeFixtures } from './manage.js';
-import { parseJSON, verifyChains } from './services/vault.js';
+import { parseJSON, verifyChains,supportedQuestions } from './services/vault.js';
 import { createAuth, cookieReference, clearSessionCookie } from './auth.js';
 import { createOperations } from './operations.js';
 import { ApiError, loginSchema, emptySchema } from './schemas.js';
@@ -18,8 +18,11 @@ import { createCapture } from './services/capture.js';
 import { createVault } from './services/vault.js';
 import { runChecks } from './services/checks.js';
 import { createOutput } from './services/output.js';
+import { createTelemetry } from './telemetry.js';
+import { createSarvam,createClinicalAI } from './services/sarvam.js';
 
 const pages=['login','patients','encounter','patient-visit'];
+const operationKeySchema=z.uuid();
 const healthPaths=new Set(['/api/v1/health/live','/api/v1/health/ready']);
 const authPaths=new Set(['/api/v1/auth/login','/api/v1/auth/session','/api/v1/auth/logout']);
 const allowedHeaders=['content-type','x-csrf-token','x-idempotency-key'];
@@ -67,7 +70,7 @@ function safeError(error) {
 }
 
 // Constructor hooks are private test seams. No route, environment flag or request can select one.
-export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
+export async function createApp(settings,{clock,hooks={},fixtureDirectory,aiOptions={}}={}) {
   requireStorage(Number(process.versions.node.split('.')[0])===24,'NODE_24_REQUIRED');
   for(const root of ['frontend','assets']) await verifyPublicTree(path.join(APP_ROOT,root));
   for(const file of [...pages.flatMap(page=>[`frontend/${page}/index.html`,`frontend/${page}/${page}.js`,`frontend/${page}/${page}.css`]),
@@ -91,11 +94,16 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
   const capture=createCapture(store,auth,operations,{now,settings,mock:fixtures.mock,hooks});
   const vault=createVault(store,auth,operations,{now});
   const output=createOutput(store,auth,operations,{now,hooks});
+  const telemetry=createTelemetry({utc:now});
   const app=express();app.disable('x-powered-by');app.disable('etag');app.set('trust proxy',false);
+  const sarvam=createSarvam(settings.sarvam,{now,shutdownSignal:()=>app.locals.shutdownSignal,...aiOptions});
+  const ai=createClinicalAI(store,auth,operations,capture,vault,sarvam,{now});
   app.enable('case sensitive routing');app.enable('strict routing');
-  Object.assign(app.locals,{store,auth,operations,consent,queue,capture,vault,output,fixtures,now,draining:false,
+  Object.assign(app.locals,{store,auth,operations,consent,queue,capture,vault,output,telemetry,ai,fixtures,now,draining:false,
     close(){app.locals.draining=true;auth.close();store.close();}});
-  app.use((req,res,next)=>{res.locals.requestId=randomUUID();res.set('X-Request-ID',res.locals.requestId);next();});
+  app.use((req,res,next)=>{const started=performance.now();
+    res.once('finish',()=>{if(res.locals.authorizedQuery && res.statusCode===200) telemetry.recordQuery(performance.now()-started);});
+    res.locals.requestId=randomUUID();res.set('X-Request-ID',res.locals.requestId);next();});
   app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],
     connectSrc:["'self'",settings.apiOrigin],imgSrc:["'self'"],fontSrc:["'self'"],objectSrc:["'none'"],
     baseUri:["'none'"],frameAncestors:["'none'"],formAction:["'self'"],upgradeInsecureRequests:settings.loopbackHttp?null:[]}},
@@ -114,7 +122,7 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
     if(req.method==='OPTIONS') {
       const requested=(req.get('Access-Control-Request-Headers') ?? '').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
       const requestedPath=req.originalUrl.split('?')[0];
-      if(origin!==settings.frontendOrigin || !(authPaths.has(requestedPath) || domainPaths.test(requestedPath) || clinicalPaths.test(requestedPath)) ||
+      if(origin!==settings.frontendOrigin || !(authPaths.has(requestedPath) || domainPaths.test(requestedPath) || clinicalPaths.test(requestedPath) || ['/api/v1/system/telemetry','/api/v1/ai/records/ask','/api/v1/ai/consultation/brief'].includes(requestedPath)) ||
         !['GET','POST'].includes(req.get('Access-Control-Request-Method')) || requested.some(h=>!allowedHeaders.includes(h))) return next(new ApiError('ORIGIN_REJECTED'));
       res.vary('Access-Control-Request-Headers');res.vary('Access-Control-Request-Method');
       res.set('Access-Control-Allow-Methods','GET, POST');res.set('Access-Control-Allow-Headers',allowedHeaders.join(', '));return res.status(204).end();
@@ -133,7 +141,7 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
   });
   function postHeaders(req,res,next) {
     if(req.get('Origin')!==settings.frontendOrigin) return next(new ApiError('ORIGIN_REJECTED'));
-    if(!z.uuid().safeParse(req.get('X-Idempotency-Key')).success) return next(new ApiError('VALIDATION_ERROR',{fields:[{path:'X-Idempotency-Key',code:'INVALID'}]}));
+    if(!operationKeySchema.safeParse(req.get('X-Idempotency-Key')).success) return next(new ApiError('VALIDATION_ERROR',{fields:[{path:'X-Idempotency-Key',code:'INVALID'}]}));
     if(Object.keys(req.query).length) return next(new ApiError('VALIDATION_ERROR'));
     if(!/^application\/json(?:\s*;\s*charset=utf-8)?$/iu.test(req.get('Content-Type') ?? '') ||
       (req.get('Content-Encoding') && req.get('Content-Encoding').toLowerCase()!=='identity')) return next(new ApiError('UNSUPPORTED_MEDIA_TYPE'));
@@ -244,7 +252,8 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
         encounterId:req.validatedQuery.encounter_id,kind,query:req.validatedQuery})));
   }
   app.post('/api/v1/vault/query',postHeaders,body,validate(schemas.questionSchema),
-    async(req,res)=>clinicalResponse(res,await vault.query(ref(req),intent(req))));
+    async(req,res)=>{const result=await vault.query(ref(req),intent(req));const value=JSON.parse(result.release().toString('utf8'));
+      res.locals.authorizedQuery=true;return json(res,value);});
   app.post('/api/v1/vault/affirmation',postHeaders,body,validate(schemas.checkSchema),
     async(req,res)=>clinicalResponse(res,await runChecks(vault,ref(req),intent(req))));
   for(const format of ['summary','fhir-export']) {
@@ -266,6 +275,16 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
     res.set('X-Export-ID',result.generationId);res.set('Content-Disposition',`attachment; filename="vaultmed-audit-${result.generationId}.json"`);
     return res.type('application/json').send(buffer);
   });
+  app.get('/api/v1/system/telemetry',query(emptySchema),(req,res)=>{
+    store.runUnit(false,()=>{const ctx=auth.authenticate(ref(req));
+      if(!['STAFF','CLINICIAN'].includes(ctx.actor.role)) throw new ApiError('SCOPE_DENIED');
+      auth.room(ref(req),ctx.actor.room_ids[0],'queue:operate');});
+    return json(res,telemetry.snapshot(capture.inFlight));
+  });
+  app.post('/api/v1/ai/records/ask',postHeaders,body,validate(schemas.aiAskSchema),
+    async(req,res)=>clinicalResponse(res,await ai.ask(ref(req),intent(req))));
+  app.post('/api/v1/ai/consultation/brief',postHeaders,body,validate(schemas.aiBriefSchema),
+    async(req,res)=>clinicalResponse(res,await ai.brief(ref(req),intent(req))));
   app.use('/api',(req,res,next)=>next(new ApiError('RESOURCE_UNAVAILABLE')));
   app.get('/',(req,res)=>res.redirect(302,'/login/'));
   for(const name of [...pages,'shared']) app.use(`/${name}`,express.static(path.join(APP_ROOT,'frontend',name),{dotfiles:'deny',index:'index.html',fallthrough:false}));
@@ -278,6 +297,7 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
     if(['SESSION_ENDED','LOGIN_REAUTH_REQUIRED'].includes(safe.code)) res.set('Set-Cookie',clearSessionCookie(settings));
     if(safe.retryAfter) res.set('Retry-After',String(safe.retryAfter));
     return json(res,{error:safe.code,detail:safe.detail,retry_strategy:safe.retry_strategy,commit_state:safe.commit_state,
+      ...(['AI_UNAVAILABLE','UNSUPPORTED_QUESTION'].includes(safe.code)?{supported_questions:supportedQuestions}:{}),
       ...(safe.fields?{fields:safe.fields}:{}),...(safe.issuance?{issuance:safe.issuance}:{})},safe.status);
   });
   return app;

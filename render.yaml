@@ -1,0 +1,48 @@
+# Review-only deployment candidate. Applying this provisions PAID compute + disk.
+# App/ is an independent repository: leave Render's root directory empty.
+services:
+  - type: web
+    name: vaultmed
+    runtime: node
+    plan: 0.5c-512mb
+    region: singapore
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: npm ci --include=dev && npm run check:environment && npm run build
+    startCommand: npm run deploy:start
+    healthCheckPath: /api/v1/health/ready
+    disk:
+      name: vaultmed-runtime
+      mountPath: /opt/render/project/src/data/runtime
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.1
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: WEB_CONCURRENCY
+        value: "1"
+      - key: VAULTMED_DB_PATH
+        value: data/runtime/vaultmed.sqlite3
+      - key: FRONTEND_ORIGIN
+        fromService:
+          type: web
+          name: vaultmed
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: API_ORIGIN
+        fromService:
+          type: web
+          name: vaultmed
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: PUBLIC_API_BASE_URL
+        value: /api/v1
+      - key: USE_MOCK_ASR
+        value: "true"
+      - key: SARVAM_ENABLED
+        value: "true"
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: SARVAM_ACCESS_FILE
+        value: /etc/secrets/sarvam-free-access.json

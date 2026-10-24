@@ -10,6 +10,7 @@ node_modules/
 *.key
 *.p12
 *.pfx
+/vaultmed-passwords.json
 
 # Persistent and generated private data; credential-free fixture sources are tracked
 data/runtime/*

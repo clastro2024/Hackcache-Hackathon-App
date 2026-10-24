@@ -5,6 +5,16 @@ import { z } from 'zod';
 
 export const APP_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 export const PASSWORD_OPTIONS = Object.freeze({ memoryCost: 19456, timeCost: 2, parallelism: 1 });
+export const SARVAM_RENDER_ACCESS_FILE='/etc/secrets/sarvam-free-access.json';
+export function resolveSarvamAccessFile(value='data/runtime/sarvam-free-access.json') {
+  if(value===SARVAM_RENDER_ACCESS_FILE)return value;
+  if(typeof value!=='string'||!value.trim()||/[?#\x00-\x1f]/u.test(value)||value.startsWith('//')||value.startsWith('\\\\')||value.slice(2).includes(':'))
+    throw new ConfigurationError('SARVAM_ACCESS_FILE');
+  const file=path.resolve(APP_ROOT,value);
+  if(!['data/runtime','data/test-runs'].some(directory=>file!==path.join(APP_ROOT,directory)&&isWithin(path.join(APP_ROOT,directory),file)))
+    throw new ConfigurationError('SARVAM_ACCESS_FILE');
+  return file;
+}
 
 export class ConfigurationError extends Error {
   constructor(field) {
@@ -79,6 +89,13 @@ export function parsePublicApiBase(value = '/api/v1') {
   return url.href.replace(/\/$/u, '');
 }
 
+export function loadSarvamSettings(env=process.env) {
+  const ai=optionalBoolean(env.SARVAM_ENABLED,false);
+  const key=typeof env.SARVAM_API_KEY==='string'?env.SARVAM_API_KEY.trim():'';
+  return Object.freeze({requested:ai.value,valid:ai.valid,apiKey:key,accessFile:resolveSarvamAccessFile(env.SARVAM_ACCESS_FILE),
+    configurationAvailable:ai.valid&&ai.value&&key.length>0});
+}
+
 export function loadStorageSettings(env = process.env) {
   return Object.freeze({ appRoot: APP_ROOT, dbPath: resolveDatabasePath(env.VAULTMED_DB_PATH) });
 }
@@ -102,13 +119,10 @@ export function loadServerSettings(env = process.env) {
     }
   }
   const mock = optionalBoolean(env.USE_MOCK_ASR, true);
-  const ai = optionalBoolean(env.SARVAM_ENABLED, false);
-  const key = typeof env.SARVAM_API_KEY === 'string' ? env.SARVAM_API_KEY.trim() : '';
   return Object.freeze({
     ...loadStorageSettings(env), port, host, frontendOrigin, apiOrigin,
     loopbackHttp: new URL(apiOrigin).protocol === 'http:',
     mockAsr: Object.freeze({ enabled: mock.value, valid: mock.valid }),
-    sarvam: Object.freeze({ requested: ai.value, valid: ai.valid, apiKey: key,
-      configurationAvailable: ai.valid && ai.value && key.length > 0 }),
+    sarvam: loadSarvamSettings(env),
   });
 }

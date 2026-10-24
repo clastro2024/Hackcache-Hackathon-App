@@ -3,6 +3,7 @@ import { eventSchema, ApiError, topics } from '../schemas.js';
 
 export function vaultError(code) { return Object.assign(new Error(code), { code }); }
 const fail = () => { throw vaultError('CLINICAL_INTEGRITY_INVALID'); };
+const jsonNumber=/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/u;
 
 // Bounded parser before Zod: JSON.parse alone discards duplicate object keys.
 export function parseJSON(input, maxBytes = 131072) {
@@ -10,7 +11,8 @@ export function parseJSON(input, maxBytes = 131072) {
   let position = 0;
   let nodes = 0;
   const bad = () => { throw vaultError('INVALID_JSON'); };
-  const space = () => { while (/[\x20\t\r\n]/u.test(input[position] ?? '') && position < input.length) position += 1; };
+  const space = () => { while (position<input.length) {const code=input.charCodeAt(position);
+    if(code!==32 && code!==9 && code!==10 && code!==13)break;position+=1;} };
   function string() {
     const start = position++;
     while (position < input.length) {
@@ -32,7 +34,6 @@ export function parseJSON(input, maxBytes = 131072) {
       const object = char === '{';
       const result = object ? Object.create(null) : [];
       const end = object ? '}' : ']';
-      const keys = new Set();
       space();
       if (input[position] === end) { position += 1; return result; }
       while (position < input.length) {
@@ -40,8 +41,7 @@ export function parseJSON(input, maxBytes = 131072) {
         if (object) {
           if (input[position] !== '"') bad();
           const key = string();
-          if (keys.has(key)) bad();
-          keys.add(key);
+          if (Object.hasOwn(result,key)) bad();
           space();
           if (input[position++] !== ':') bad();
           result[key] = value(depth + 1);
@@ -53,10 +53,10 @@ export function parseJSON(input, maxBytes = 131072) {
       }
       return bad();
     }
-    for (const [token, result] of [['true', true], ['false', false], ['null', null]]) {
-      if (input.startsWith(token, position)) { position += token.length; return result; }
-    }
-    const token = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/u.exec(input.slice(position))?.[0];
+    if(input.startsWith('true',position)){position+=4;return true;}
+    if(input.startsWith('false',position)){position+=5;return false;}
+    if(input.startsWith('null',position)){position+=4;return null;}
+    const token = jsonNumber.exec(input.slice(position))?.[0];
     if (!token) bad();
     position += token.length;
     const number = Number(token);
@@ -70,12 +70,10 @@ export function parseJSON(input, maxBytes = 131072) {
 }
 
 function compareKeys(a, b) {
-  const left = [...a].map(c => c.codePointAt(0));
-  const right = [...b].map(c => c.codePointAt(0));
-  for (let i = 0; i < Math.min(left.length, right.length); i += 1) {
-    if (left[i] !== right[i]) return left[i] - right[i];
-  }
-  return left.length - right.length;
+  let left=0,right=0;
+  while(left<a.length && right<b.length){const x=a.codePointAt(left),y=b.codePointAt(right);
+    if(x!==y)return x-y;left+=x>65535?2:1;right+=y>65535?2:1;}
+  return left<a.length?1:right<b.length?-1:0;
 }
 
 export function pythonFloat(number) {
@@ -92,27 +90,47 @@ export function pythonFloat(number) {
 // Python sort_keys/ensure_ascii=False/compact v1, not RFC 8785.
 // The typed envelope has an integer sequence and nullable float capture.confidence.
 export function canonicalJSON(value, trail = [], depth = 0) {
+  let result='';
+  writeCanonical(value,trail.join('.'),trail.length>0,depth,part=>{result+=part;});
+  return result;
+}
+// Verify against the stored string without constructing a second full envelope.
+// This uses exactly the same token writer as new canonical records.
+export function canonicalMatches(value,expected) {
+  let position=0,matches=typeof expected==='string';
+  writeCanonical(value,'',false,0,part=>{
+    if(matches && !expected.startsWith(part,position))matches=false;
+    position+=part.length;
+  });
+  return matches && position===expected.length;
+}
+function writeCanonical(value, trail, hasTrail, depth,write) {
   if (depth > 32) throw vaultError('INVALID_CANONICAL_VALUE');
-  if (value === null || typeof value === 'boolean') return String(value);
+  if (value === null || typeof value === 'boolean') {write(String(value));return;}
   if (typeof value === 'string') {
-    if ([...value].some(c => c.codePointAt(0) >= 0xd800 && c.codePointAt(0) <= 0xdfff)) {
-      throw vaultError('INVALID_CANONICAL_VALUE');
-    }
-    return JSON.stringify(value);
+    for(const c of value){const code=c.codePointAt(0);if(code>=0xd800 && code<=0xdfff)throw vaultError('INVALID_CANONICAL_VALUE');}
+    write(JSON.stringify(value));return;
   }
   if (typeof value === 'number') {
-    if (trail.join('.') === 'capture.confidence' || !Number.isInteger(value) || Object.is(value, -0)) return pythonFloat(value);
+    if (trail === 'capture.confidence' || !Number.isInteger(value) || Object.is(value, -0)) {write(pythonFloat(value));return;}
     if (!Number.isSafeInteger(value)) throw vaultError('INVALID_CANONICAL_VALUE');
-    return String(value);
+    write(String(value));return;
   }
   if (Array.isArray(value)) {
     if (Object.keys(value).length !== value.length) throw vaultError('INVALID_CANONICAL_VALUE');
-    return `[${value.map((child, index) => canonicalJSON(child, [...trail, String(index)], depth + 1)).join(',')}]`;
+    write('[');
+    for(let index=0;index<value.length;index+=1){if(index)write(',');
+      writeCanonical(value[index],hasTrail?`${trail}.${index}`:String(index),true,depth+1,write);}
+    write(']');return;
   }
   if (value && [Object.prototype, null].includes(Object.getPrototypeOf(value))) {
     if(Object.getOwnPropertySymbols(value).length) throw vaultError('INVALID_CANONICAL_VALUE');
-    return `{${Object.keys(value).sort(compareKeys).map(key =>
-      `${canonicalJSON(key)}:${canonicalJSON(value[key], [...trail, key], depth + 1)}`).join(',')}}`;
+    write('{');let index=0;
+    for(const key of Object.keys(value).sort(compareKeys)){
+      if(index++)write(',');writeCanonical(key,'',false,0,write);write(':');
+      writeCanonical(value[key],hasTrail?`${trail}.${key}`:key,true,depth+1,write);
+    }
+    write('}');return;
   }
   throw vaultError('INVALID_CANONICAL_VALUE');
 }
@@ -123,7 +141,7 @@ export const termFamilies=Object.freeze({MEDICATION_RECORDED:['ecosprin_demo','m
   ALLERGY_RECORDED:['penicillin_demo','latex_demo'],PROCEDURE_RECORDED:['cholecystectomy_demo']});
 export function eventHash(previous, canonical) {
   if (previous !== 'GENESIS' && !/^[a-f0-9]{64}$/u.test(previous)) fail();
-  return digest(Buffer.concat([Buffer.from(`${previous}|`, 'ascii'), Buffer.from(canonical, 'utf8')]));
+  return createHash('sha256').update(`${previous}|`,'ascii').update(canonical,'utf8').digest('hex');
 }
 
 function validateThread(event, threads, seen) {
@@ -137,17 +155,18 @@ function validateThread(event, threads, seen) {
   seen.add(event.event_id);
 }
 
-export function verifyPatient(db, patientId, facilityId) {
+export function verifyPatient(db, patientId, facilityId, {includeRows=false}={}) {
   const rows = db.prepare('SELECT *,CAST(event_json AS BLOB) AS event_bytes FROM clinical_events WHERE patient_id = ? ORDER BY sequence').all(patientId);
   let previous = 'GENESIS';
   const threads = new Map();
   const seen = new Set();
+  const verified=includeRows?[]:null;
   for (let index = 0; index < rows.length; index += 1) {
     try {
     const row = rows[index];
     let event;
     try { event = eventSchema.parse(parseJSON(row.event_json, 65536)); } catch { fail(); }
-    if (canonicalJSON(event) !== row.event_json || !Buffer.from(row.event_json,'utf8').equals(row.event_bytes) || event.facility_id !== facilityId ||
+    if (!canonicalMatches(event,row.event_json) || !Buffer.from(row.event_json,'utf8').equals(row.event_bytes) || event.facility_id !== facilityId ||
       event.sequence !== index + 1 || row.previous_hash !== previous ||
       eventHash(previous, row.event_json) !== row.event_hash || Date.parse(event.recorded_at) !== row.recorded_at ||
       ['event_id', 'patient_id', 'encounter_id', 'sequence', 'supersedes_event_id', 'ledger_format']
@@ -159,13 +178,14 @@ export function verifyPatient(db, patientId, facilityId) {
         author?.role !== 'CLINICIAN') fail();
     }
     validateThread(event, threads, seen);
+    if(verified)verified.push({event,previous_hash:row.previous_hash,event_hash:row.event_hash});
     previous = row.event_hash;
     } catch(error) {
       if(error.code==='CLINICAL_INTEGRITY_INVALID') error.failure_sequence=index+1;
       throw error;
     }
   }
-  return { patient_id: patientId, checked_events: rows.length, head_hash: previous };
+  return { patient_id: patientId, checked_events: rows.length, head_hash: previous,...(verified?{rows:verified}:{}) };
 }
 
 export function verifyChains(db) {
@@ -241,12 +261,13 @@ export function appendReviewedDraft(store,draftId,actorId,time) {
 export function clinicalSource(store,patientId,asOf) {
   const facility=store.db.prepare('SELECT facility_id FROM schema_meta WHERE singleton=1').get().facility_id;
   let head;
-  try {head=verifyPatient(store.db,patientId,facility);} catch {throw new ApiError('CLINICAL_INTEGRITY_INVALID');}
+  try {head=verifyPatient(store.db,patientId,facility,{includeRows:true});} catch {throw new ApiError('CLINICAL_INTEGRITY_INVALID');}
   const sequence=asOf ?? head.checked_events;
   if(!Number.isSafeInteger(sequence) || sequence<0 || sequence>head.checked_events) throw new ApiError('VALIDATION_ERROR');
-  const rows=store.db.prepare('SELECT event_json,previous_hash,event_hash FROM clinical_events WHERE patient_id=? AND sequence<=? ORDER BY sequence').all(patientId,sequence);
+  // Reuse this call's fully verified envelopes, never an earlier request's source cache.
+  const rows=head.rows.filter(row=>row.event.sequence<=sequence);
   return {patient_id:patientId,as_of_sequence:sequence,head_hash:rows.at(-1)?.event_hash ?? 'GENESIS',
-    rows:rows.map(row=>({event:parseJSON(row.event_json,65536),previous_hash:row.previous_hash,event_hash:row.event_hash}))};
+    rows};
 }
 export function project(source,time) {
   const threads=new Map();
@@ -320,7 +341,7 @@ export function createVault(store,auth,operations,{now}) {
     if(assigned.actor.role!=='CLINICIAN' || assigned.encounter.patient_id!==patientId) throw new ApiError('RESOURCE_UNAVAILABLE');
     return auth.encounter(ref,encounterId,{scope});
   }
-  async function read(ref,{patientId,encounterId,kind,query={},intent,compute}) {
+  async function read(ref,{patientId,encounterId,kind,query={},intent,compute,outcomeMetadata={}}) {
     auth.admitSensitive(ref);
     const scope=kind==='events'?'vault:read':kind==='query'?'vault:query':kind==='checks'?'affirmation:run':'triage:read';
     const authorizeRead=()=>{
@@ -341,7 +362,7 @@ export function createVault(store,auth,operations,{now}) {
         if((query.after_sequence ?? 0)>source.as_of_sequence) throw new ApiError('VALIDATION_ERROR');
         const outcome=receipt ?? {status:'CLINICAL_READ',changed:false,patient_id:patientId,...(encounterId?{encounter_id:encounterId}:{}),
           as_of_sequence:source.as_of_sequence,ruleset_version:kind==='checks'?'no-active-clinical-rules-v1':'demo-topics-v1',
-          ...(intent?{query_id:randomUUID()}:{}),committed_at:new Date(now()).toISOString()};
+          ...(intent?{query_id:randomUUID()}:{}),committed_at:new Date(now()).toISOString(),...outcomeMetadata};
         return {source:{...source,outcome,replayed:Boolean(receipt)},outcome};
       },
       compute:source=>{

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { ApiError, draftItemSchema, eventSchema, id } from '../schemas.js';
-import { canonicalJSON, digest, parseJSON, reviewedEvent, appendReviewedDraft, clinicalSource, termFamilies } from './vault.js';
+import { ApiError, draftItemSchema, eventSchema, id, aiProposalSchema } from '../schemas.js';
+import { canonicalJSON, digest, parseJSON, reviewedEvent, appendReviewedDraft, clinicalSource, termFamilies,project } from './vault.js';
 
 const simulation='Simulated transcription — predefined text; audio is not processed.';
 const normalize=value=>value.normalize('NFKC').trim().replace(/\s+/gu,' ').toLowerCase();
@@ -23,7 +23,7 @@ const warningSchema=z.strictObject({code:z.enum(Object.keys(warningMessages)),le
   item_index:z.number().int().min(0).max(19).nullable(),message:z.enum(Object.values(warningMessages))});
 const storedSchema=z.strictObject({capture_schema_version:z.literal('scribe-draft-v1'),input_mode:z.enum(['MANUAL_TEXT','MOCK_FIXTURE']),
   language:z.enum(['hi','en']),fixture_id:id.nullable(),extractor_version:id,mock_mode_used:z.boolean(),simulation_label:z.string().nullable(),
-  original_text:z.string(),text:z.string(),items:z.array(draftItemSchema).max(20),warnings:z.array(warningSchema).max(100),edited:z.boolean()});
+  original_text:z.string(),text:z.string(),items:z.array(draftItemSchema).max(20),warnings:z.array(warningSchema).max(100),edited:z.boolean(),ai_proposal:aiProposalSchema.optional()});
 export function storedCapture(row) {
   try {
     const value=storedSchema.parse(parseJSON(row.capture_json));
@@ -144,6 +144,7 @@ export function createCapture(store,auth,operations,{now,settings,mock,hooks={}}
     const result=await operations.readProtected(ref,{maxBytes:196608,authorize:()=>{
       const ctx=assigned(ref,encounterId);open(ctx);
       const row=forEncounter(encounterId);if(row) sourceAuthority(ref,ctx,storedCapture(row).items.filter(item=>item.supersedes_event_id));
+      if(row && storedCapture(row).ai_proposal?.include_history) auth.encounter(ref,encounterId,{scope:'vault:query'});
       return ctx;
     },capture:ctx=>{
       const row=forEncounter(encounterId);
@@ -223,7 +224,41 @@ export function createCapture(store,auth,operations,{now,settings,mock,hooks={}}
       return {release(){try {return protectedDraft.release();} catch(error) {error.commit_state='UNKNOWN';throw error;}}};
     } catch(error) {error.commit_state='UNKNOWN';throw error;}
   }
-  return {command,readDraft,
+  function aiAuthorize(ref,draftId) {
+    const row=draft(draftId);if(!row){auth.authenticate(ref);throw new ApiError('RESOURCE_UNAVAILABLE');}
+    return {...assigned(ref,row.encounter_id),draft:row};
+  }
+  function aiContext(ref,ctx,body) {
+    open(ctx);version(ctx.draft,body.expected_draft_version);if(ctx.draft.state!=='DRAFT')throw new ApiError('INVALID_TRANSITION');
+    const capture=storedCapture(ctx.draft),selected=[];let asOf=null,total=0;
+    if(body.include_history) {
+      auth.encounter(ref,ctx.encounter.encounter_id,{scope:'vault:query'});
+      const history=clinicalSource(store,ctx.encounter.patient_id);asOf=history.as_of_sequence;
+      const records=Object.values(project(history,ctx.now).clinical_data).filter(Array.isArray).flat().filter(e=>e && typeof e==='object');
+      total=records.length;selected.push(...records.slice(0,20));
+    }
+    const context={synthetic:true,notes:{original_text:capture.original_text,current_text:capture.text},history:{included:body.include_history,
+      as_of_sequence:asOf,total_usable_records:total,omitted_records:Math.max(0,total-selected.length),records:selected.map((event,index)=>{
+        const payload=structuredClone(event.payload);delete payload.declared_by;
+        return {label:`E${index+1}`,event_type:event.event_type,payload,source_kind:event.source.kind,occurred_on:event.occurred_on,occurrence_text:event.occurrence_text};})}};
+    if(Buffer.byteLength(JSON.stringify(context))>24576)throw new ApiError('AI_CONTEXT_TOO_LARGE');
+    return {context,source_version:ctx.draft.version,source_hash:digest(ctx.draft.capture_json),history_event_ids:selected.map(e=>e.event_id),history_as_of_sequence:asOf};
+  }
+  function aiRecheck(ref,ctx,body,source) {
+    if(ctx.draft.version!==source.source_version || digest(ctx.draft.capture_json)!==source.source_hash)throw new ApiError('AI_CONTEXT_CHANGED');
+    open(ctx);if(ctx.draft.state!=='DRAFT')throw new ApiError('AI_CONTEXT_CHANGED');
+    if(body.include_history){auth.encounter(ref,ctx.encounter.encounter_id,{scope:'vault:query'});
+      const history=clinicalSource(store,ctx.encounter.patient_id),tips=new Set(Object.values(project(history,ctx.now).clinical_data).filter(Array.isArray).flat().filter(e=>e && typeof e==='object').map(e=>e.event_id));
+      if(source.history_event_ids.some(id=>!tips.has(id)))throw new ApiError('AI_CONTEXT_CHANGED');}
+  }
+  function aiStore(ctx,source,proposal) {
+    if(!store.inWriteUnit)throw new ApiError('INTERNAL_ERROR');
+    const capture=storedCapture(ctx.draft);capture.ai_proposal=aiProposalSchema.parse(proposal);const json=encoded(capture,ctx);
+    store.db.prepare("UPDATE clinical_drafts SET capture_json=?,version=version+1,updated_at=? WHERE draft_id=?").run(json,ctx.now,ctx.draft.draft_id);
+    return {status:'AI_BRIEF_PROPOSED',changed:true,draft_id:ctx.draft.draft_id,encounter_id:ctx.encounter.encounter_id,
+      version:ctx.draft.version+1,draft_state:'DRAFT',ai_status:'COMPLETED',generation_mode:'LIVE_SARVAM',generation:proposal.generation};
+  }
+  return {command,readDraft,aiAuthorize,aiContext,aiRecheck,aiStore,
     // Reserve before body parsing; no waiting queue. The route releases on finish/close/failure.
     admit(ref,csrf){const ctx=auth.authenticate(ref);auth.csrf(ctx,csrf);
       if(ctx.actor.role!=='CLINICIAN' || !ctx.actor.permissions.includes('clinical:write')) throw new ApiError('SCOPE_DENIED');

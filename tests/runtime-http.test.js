@@ -58,3 +58,16 @@ test('R03 startup scope: clock behind the latest persisted receipt is refused an
   await assert.rejects(()=>createApp(settingsFor(f)),{code:'TIME_UNTRUSTED'});
   f.store=openDatabase(f.file,{verifyClinical:verifyChains,now:future});
 });
+
+test('R10 forced drain: actual 30-second grace closes a held request and releases database ownership',{timeout:45000},async t=>{
+  const f=await fixture(t);f.store.close();const runtime=await startServer({...settingsFor(f),port:0});
+  f.cleanup=()=>runtime.close();f.store=runtime.app.locals.store;
+  const request=http.request({host:'127.0.0.1',port:runtime.server.address().port,path:'/api/v1/auth/login',method:'POST',headers:{
+    Origin:origin,'Content-Type':'application/json','X-Idempotency-Key':crypto.randomUUID(),'Content-Length':'100'}},response=>response.resume());
+  request.on('error',()=>{});request.flushHeaders();request.write('{');
+  await new Promise(resolve=>runtime.server.once('request',resolve));
+  const began=performance.now();await runtime.close();const elapsed=performance.now()-began;
+  assert.equal(runtime.app.locals.forceDrainCount,1);assert.ok(elapsed>=29500 && elapsed<40000,`drain elapsed ${elapsed}`);
+  assert.equal(runtime.app.locals.store.db.open,false);request.destroy();
+  f.store=openDatabase(f.file,{verifyClinical:verifyChains});assert.equal(f.store.verification.counts.patients,4);
+});

@@ -161,4 +161,4 @@ test('D01/ASR01 fixture-loader scope: invalid optional ASR preserves valid core 
   assert.throws(()=>privatePath('data/fixtures/unsafe-database.json'),error=>error.code==='UNSAFE_PRIVATE_PATH');
   assert.throws(()=>privatePath('data/unignored-database.json'),error=>error.code==='UNSAFE_PRIVATE_PATH');
 });
-test.todo('R/D acceptance remaining: hosted cookies/persistence, forced drain and resource workload');
+test.todo('R/D acceptance remaining: hosted cookies and persistent-volume recovery');

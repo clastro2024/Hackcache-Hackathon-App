@@ -1,4 +1,4 @@
-# Implemented API — through step 5
+# Implemented API — through backend/runtime step 6
 
 All paths below have the `/api/v1` prefix. These APIs use fictional local data. Capture, exact review/commit, cited history, reviewed summary/local FHIR and own-patient audit downloads are implemented. Optional checks disclose unsupported clinical-rule coverage. Pages are developed separately; an API route existing does not establish a connected browser flow.
 
@@ -195,3 +195,30 @@ const route = await api.read('/navigation/route', {
 ```
 
 Keep the original intent for uncertain noncredential reconciliation. Automatic retries are at most two additional attempts, only transport loss/503 SAME_KEY, with full jitter and server Retry-After respected within five-second retry admission. 409/429 never silently repeat a new action. Session/dataset changes discard pending intents and late results. Pages must register clearing callbacks and render untrusted text safely. Actual browser cookie/CORS/proxy behavior and connected page flows remain separate verification.
+
+## Optional text assistance — live mode disabled
+
+The integrated server adapter passed stub and real synthetic checks. Local configuration now enables Sarvam behind a private expiring operator credit file; default public settings remain off. Render supports a server key and private credit secret. Missing/expired credit makes AI unavailable while manual/local paths remain usable; no activation/status-writing endpoint is exposed. Broader quality and actual hosted behavior remain unverified. See [AI setup/evidence](AI.md). Routes use the ordinary strict POST/Origin/session/CSRF/key rules. No client-supplied model, URL, prompt, key or clinical identity is accepted.
+
+| POST path | Strict input / behavior |
+| --- | --- |
+| /ai/records/ask | `{encounter_id, question}`; question 1–1000 characters. Assigned clinician and current vault:query required. Provider classifies into one of the six topics; the backend computes the cited local evidence. UNSUPPORTED/AMBIGUOUS returns 422 with supported choices, no certainty verdict. |
+| /ai/consultation/brief | `{draft_id, expected_draft_version, include_history?}`; boolean defaults false. Assigned checked-in open encounter and clinical:write; DRAFT state/exact saved version for new generation. Including history additionally requires current vault:query. |
+
+Ask returns ordinary cited query fields plus interpreted_topic, ai_status, generation_mode and generation metadata when actually generated. If live mode is unavailable, an exact supported alias uses ai_status UNAVAILABLE and generation_mode LOCAL_FALLBACK; other input returns AI_UNAVAILABLE with six supported_questions. An available provider failure is a safe error, not a silently relabelled generated answer. Topic/source-bound receipts reconstruct the original answer on replay without repeating provider work and still require current permission.
+
+Brief returns the ordinary protected draft envelope with capture ai_proposal. Seven section keys are PRESENTING_CONCERN, REPORTED_HISTORY, SUPPLIED_FINDINGS, ASSESSMENT_PLAN, MEDICATIONS, FOLLOW_UP and MISSING_UNCERTAIN. Each section has `{text, note_quotes, event_refs}`; text null means missing material and has no citations. Nonempty sections require literal original/current-note quotes or known E1–E20 source labels. Valid references do not prove medical correctness. Source context identifies synthetic data, whether history is included, as_of_sequence, total_usable_records and omitted_records. Up to twenty current usable records are included without silent text truncation or whole-vault upload.
+
+The proposal has proposal_schema_version consultation-proposal-v1, sections, actual generation metadata, saved source_version/source_hash, include_history, local history_event_ids/history_as_of_sequence and proposal_hash. Generation metadata records UUID, provider SARVAM, model sarvam-105b, versioned prompt, actual time, provider_latency_ms and actual token counts or null. Provider latency is distinct from local query telemetry and resource targets. Internal IDs/account names are not automatically sent; source notes are untrusted fictional text.
+
+Proposal persistence increments draft_version and keeps DRAFT, original_text, current text and items intact. It creates no clinical events, review or export. The clinician applies/edits via normal save, then reviews/commits the exact result. Saved text/history source changes during generation prevent stale storage. Replay never overwrites later edits; it returns metadata with snapshot_available false/draft null if that version is no longer current. Current history permission also gates reading a stored history-containing proposal after revocation.
+
+One provider call may run, with no waiting queue, three new reservations/minute and thirty/dataset. Minimal durable audit reservation precedes egress; all attempts consume a slot, including failures/timeouts. Completed safe receipts contain no prompts, answer text or proposal sections. Same-key pending is AI_REQUEST_IN_PROGRESS; a durable orphan is AI_OUTCOME_UNKNOWN. Ordinary restart retains caps and completed/failure reconciliation. Context is at most 24 KiB, complete request 32 KiB, provider response 64 KiB and deadline twenty seconds; no automatic upstream retry/output repair. Billing/auth/rate errors stop the adapter for that process.
+
+Safe failures: 503 AI_UNAVAILABLE, AI_PROVIDER_UNAVAILABLE or AI_OUTPUT_INVALID; 429 AI_BUSY, AI_RATE_LIMITED or AI_BUDGET_EXHAUSTED; 409 AI_REQUEST_IN_PROGRESS, AI_OUTCOME_UNKNOWN or AI_CONTEXT_CHANGED; 413 AI_CONTEXT_TOO_LARGE. AI errors have retry_strategy NONE except AI_CONTEXT_CHANGED uses REFRESH_STATE. Never create a fresh intent automatically after transport loss; reconcile the original intent. Provider errors and keys are not forwarded. A revoked result can leave an uncertainty reservation while withholding all clinical output. Manual/offline care remains available.
+
+## Runtime telemetry
+
+GET /system/telemetry has no query fields and requires current assigned STAFF/CLINICIAN queue:operate permission. It returns rss_bytes or null, rss_availability/reason, latency_p95_ms or null, latency_operation VAULT_QUERY, latency_basis SERVER_REQUEST, sample_count, window_seconds 300, latency_availability/reason, ingestion_in_flight and actual measured_at. No patient identifiers/clinical counts appear. Ordinary request/dataset metadata still applies.
+
+Only successful authorized POST /vault/query requests enter this process-local window, measured from server request entry to response finish. At most 256 samples survive and samples expire at five minutes. At least 100 are required for nearest-rank p95; otherwise null/UNAVAILABLE/INSUFFICIENT_SAMPLES. Failed/public requests, active-state reads and provider calls do not enter this percentile. Current process RSS is not an owned-workload benchmark peak. See [operations](OPERATIONS.md) for the separate CLIENT_HTTP workload and report.

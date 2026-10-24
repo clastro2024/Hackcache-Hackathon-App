@@ -9,6 +9,9 @@ import { appendAudit, findReceipt, putReceipt, fingerprint } from './services/au
 import { digest, parseJSON } from './services/vault.js';
 
 export const SESSION_COOKIE = 'vaultmed_session';
+const roomIdsSchema=z.array(id).max(10);
+const permissionsSchema=z.array(z.string()).max(20);
+const grantScopesSchema=z.array(z.enum(scopes)).max(5);
 const permissions = {
   STAFF:['intake:register','queue:operate','consent:assist'],
   CLINICIAN:['queue:operate','clinical:write','emergency:read'], PATIENT:['patient:self','consent:decide'],
@@ -45,17 +48,28 @@ export function createLimiter({limit,windowMs=60000,capacity=1000,now}) {
 export async function createAuth(store,settings,{now,hooks={}}) {
   const dummyHash=await argon2.hash(randomBytes(32).toString('base64url'),{...PASSWORD_OPTIONS,type:argon2.argon2id});
   const failures=createLimiter({limit:5,now});const sensitive=createLimiter({limit:60,now});
+  // Reuse fixed SQL plans only. Every authorization gate still reads current rows.
+  const queries={
+    account:store.db.prepare(`SELECT account_id,username,role,patient_id,room_ids_json,permissions_json,registration_id,active
+      FROM accounts WHERE account_id=?`),
+    patient:store.db.prepare('SELECT display_name FROM patients WHERE patient_id=?'),
+    session:store.db.prepare('SELECT session_id,account_id,csrf_value,created_at,expires_at,revoked_at FROM sessions WHERE secret_hash=?'),
+    room:store.db.prepare('SELECT * FROM rooms WHERE room_id=?'),
+    encounter:store.db.prepare('SELECT * FROM encounters WHERE encounter_id=?'),
+    facility:store.db.prepare('SELECT facility_id FROM schema_meta WHERE singleton=1'),
+    grant:store.db.prepare('SELECT * FROM encounter_grants WHERE encounter_id=? AND clinician_session_id=? ORDER BY issued_at DESC,grant_id DESC LIMIT 1'),
+    request:store.db.prepare('SELECT * FROM consent_requests WHERE request_id=?'),
+  };
   let checkingPassword=false;
 
   function actor(accountId) {
-    const account=store.db.prepare(`SELECT account_id,username,role,patient_id,room_ids_json,permissions_json,registration_id,active
-      FROM accounts WHERE account_id=?`).get(accountId);
+    const account=queries.account.get(accountId);
     if(!account || !account.active) throw new ApiError('SESSION_ENDED');
-    const roomIds=z.array(id).max(10).parse(parseJSON(account.room_ids_json,8192));
-    const flags=z.array(z.string()).max(20).parse(parseJSON(account.permissions_json,8192));
+    const roomIds=roomIdsSchema.parse(parseJSON(account.room_ids_json,8192));
+    const flags=permissionsSchema.parse(parseJSON(account.permissions_json,8192));
     if(!permissions[account.role] || flags.some(flag=>!permissions[account.role].includes(flag)) ||
       new Set(flags).size!==flags.length || new Set(roomIds).size!==roomIds.length) throw new ApiError('DEPENDENCY_UNAVAILABLE');
-    const display=account.role==='PATIENT'?store.db.prepare('SELECT display_name FROM patients WHERE patient_id=?').get(account.patient_id)?.display_name:
+    const display=account.role==='PATIENT'?queries.patient.get(account.patient_id)?.display_name:
       `${account.role==='CLINICIAN'?'Fictional clinician':'Fictional staff'} (${account.username})`;
     const safe=actorSchema.parse({account_id:account.account_id,role:account.role,display_name:display,
       room_ids:roomIds,permissions:flags,...(account.role==='PATIENT'?{patient_id:account.patient_id}:{})});
@@ -64,7 +78,7 @@ export async function createAuth(store,settings,{now,hooks={}}) {
   function authenticate(ref) {
     const time=now();
     if(!ref) throw new ApiError('AUTH_REQUIRED');
-    const session=store.db.prepare('SELECT session_id,account_id,csrf_value,created_at,expires_at,revoked_at FROM sessions WHERE secret_hash=?').get(ref.secretHash);
+    const session=queries.session.get(ref.secretHash);
     if(!session || session.revoked_at!==null || time>=session.expires_at) throw new ApiError('SESSION_ENDED');
     return {actor:actor(session.account_id),session,now:time};
   }
@@ -160,14 +174,14 @@ export async function createAuth(store,settings,{now,hooks={}}) {
     return result;
   }
   function room(ctx,roomId,permission) {
-    const found=store.db.prepare('SELECT * FROM rooms WHERE room_id=?').get(roomId);
+    const found=queries.room.get(roomId);
     if(!found || !['STAFF','CLINICIAN'].includes(ctx.actor.role) || !ctx.actor.room_ids.includes(roomId) ||
       (ctx.actor.role==='CLINICIAN' && found.clinician_id!==ctx.actor.account_id)) throw new ApiError('RESOURCE_UNAVAILABLE');
     if(permission && !ctx.actor.permissions.includes(permission)) throw new ApiError('SCOPE_DENIED');
     return found;
   }
   function encounter(ref,encounterId,{permission,scope}={}) {
-    const ctx=authenticate(ref);const found=store.db.prepare('SELECT * FROM encounters WHERE encounter_id=?').get(encounterId);
+    const ctx=authenticate(ref);const found=queries.encounter.get(encounterId);
     if(!found) throw new ApiError('RESOURCE_UNAVAILABLE');
     room(ctx,found.room_id,permission);
     if(ctx.actor.role==='CLINICIAN' && found.clinician_id!==ctx.actor.account_id) throw new ApiError('RESOURCE_UNAVAILABLE');
@@ -175,18 +189,17 @@ export async function createAuth(store,settings,{now,hooks={}}) {
       if(ctx.actor.role!=='CLINICIAN') throw new ApiError('SCOPE_DENIED');
       if(!scopes.includes(scope)) throw new ApiError('SCOPE_DENIED');
       if(found.closed_at!==null || found.checked_in_at===null) throw new ApiError('HISTORY_LOCKED');
-      const facility=store.db.prepare('SELECT facility_id FROM schema_meta WHERE singleton=1').get().facility_id;
-      const grant=store.db.prepare('SELECT * FROM encounter_grants WHERE encounter_id=? AND clinician_session_id=? ORDER BY issued_at DESC,grant_id DESC LIMIT 1')
-        .get(found.encounter_id,ctx.session.session_id);
+      const facility=queries.facility.get().facility_id;
+      const grant=queries.grant.get(found.encounter_id,ctx.session.session_id);
       if(!grant) throw new ApiError('HISTORY_LOCKED');
       if(grant.state!=='ACTIVE' || ctx.now>=grant.expires_at) throw new ApiError('GRANT_ENDED');
       if(grant.patient_id!==found.patient_id || grant.clinician_id!==ctx.actor.account_id || grant.facility_id!==facility ||
         grant.purpose!=='OPD_CONSULTATION' || grant.expires_at>ctx.session.expires_at) throw new ApiError('HISTORY_LOCKED');
-      const allowed=z.array(z.enum(scopes)).max(5).parse(parseJSON(grant.scopes_json,8192));
+      const allowed=grantScopesSchema.parse(parseJSON(grant.scopes_json,8192));
       if(!allowed.includes(scope) || (grant.mode==='BREAK_GLASS' && !['triage:read','vault:query'].includes(scope))) throw new ApiError('SCOPE_DENIED');
       if(grant.mode==='BREAK_GLASS' && !ctx.actor.permissions.includes('emergency:read')) throw new ApiError('SCOPE_DENIED');
       if(grant.mode==='PATIENT_APPROVED') {
-        const request=store.db.prepare('SELECT * FROM consent_requests WHERE request_id=?').get(grant.request_id);
+        const request=queries.request.get(grant.request_id);
         if(!request || request.state!=='ALLOWED' || request.encounter_id!==found.encounter_id || request.patient_id!==found.patient_id ||
           request.clinician_id!==ctx.actor.account_id || request.clinician_session_id!==ctx.session.session_id ||
           request.scopes_json!==grant.scopes_json || request.decision_at===null || request.decision_at>=request.expires_at) throw new ApiError('HISTORY_LOCKED');

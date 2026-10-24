@@ -119,12 +119,12 @@ test('Node env-file loading preserves existing process environment', async t => 
   assert.equal(result.stdout, 'from-process');
 });
 
-test('server refuses missing storage and unfinished resource runner refuses action without leaking settings', async t => {
+test('server refuses missing storage and resource runner requires explicit mode without leaking settings', async t => {
   const runtime = await readdir(path.join(APP_ROOT, 'data/runtime'));
   const directory=await scratch(t);
   for (const [file, args, marker] of [
     ['backend/server.js', [], 'STARTUP_FAILED: FILE_NOT_FOUND'],
-    ['tests/resource-run.js', [], 'RESOURCE_RUN_NOT_IMPLEMENTED'],
+    ['tests/resource-run.js', [], 'RESOURCE_RUN_REQUIRES_EXPLICIT_MODE'],
   ]) {
     const result = await runNode([file, ...args],{env:{...process.env,...safeEnv,SARVAM_API_KEY:sentinel,
       VAULTMED_DB_PATH:path.join(directory,'missing.sqlite3')}});

@@ -2,7 +2,7 @@
 
 Fictional-data OPD prototype for assisted intake, queue/navigation, patient-controlled record access and clinician-reviewed documentation.
 
-**Current milestone: durable queue/consent, reviewed clinical workflows and source-checked output.** Manual/scripted capture, exact review/commit, cited history, reviewed encounter summaries, local R4 document downloads and own-patient audit history/checksums now use the backend. Optional checks explicitly report unsupported coverage; official FHIR validation stays NOT_RUN. Frontend work is separate; connected browser flows are not established by these API tests. See [implemented API](docs/API.md) and [actual evidence/next stages](docs/STATUS.md).
+**Current milestone: backend workflows, output and Sarvam integration.** Manual/scripted capture, exact review/commit, cited history, reviewed encounter summaries, local R4 downloads and own-patient audit history/checksums use the backend. Sarvam text routes are integrated, live-checked and locally enabled behind an expiring private credit confirmation. Render supports a private key/credit secret; no hosted deployment is established. Broader AI quality evaluation remains pending; see [AI setup/evidence](docs/AI.md). Official FHIR validation stays NOT_RUN. Frontend work is separate; connected browser flows are not established by API tests. See [implemented API](docs/API.md), [operations](docs/OPERATIONS.md) and [actual evidence/next stages](docs/STATUS.md).
 
 ## Setup
 
@@ -31,23 +31,31 @@ The exact eight direct packages and their transitive dependencies are locked. `.
 | `npm ci` | Reproduce dependencies from package-lock.json, including build dependencies. |
 | `npm run check:environment` | Check Node 24, locked package versions, native SQLite and Argon2id; memory-only probe, no application database. |
 | `npm run build` | Compile shared Tailwind and assemble public page shells/shared modules/assets in dist. |
-| `npm test` | Run setup/storage/recovery, real HTTP auth/queue/consent/capture/clinical/output/audit/race checks, coordinators and browser helpers; browser/runtime/AI TODOs remain explicit. |
+| `npm test` | Run storage/recovery, real HTTP workflows/output/audit/races, telemetry, actual forced drain and stubbed text-AI tests. Browser/hosted/physical-fault TODOs remain explicit. |
 | `npm start` | Verify the existing database/map/public files, then start one Express listener. Missing/invalid storage fails without creating a database. |
 | `npm run manage -- --help` | Show implemented init/verify/backup/restore/reset options. |
+| `npm run ai -- status` | Check AI configuration/key presence/credit-file expiry; no database or provider call. |
+| `npm run ai -- credit --balance-inr <verified-amount> --hours 24` | Explicit private operator credit confirmation; add --replace only after a new balance check. |
+| `npm run deploy:check` | Check HTTPS/single-worker/runtime-disk/mock-voice and optional gated-text deployment configuration without initializing storage or making a provider call. |
+| `npm run deploy:start` | Start the prepared Render candidate against an existing database, with a 25-second drain limit. |
 | `npm run manage -- init --db data/runtime/vaultmed.sqlite3 --seed opd-demo-v1` | Privately prompt for fictional account passwords and explicitly initialize a new dataset. Matching existing initialization is a verified no-op. |
-| `node tests/resource-run.js` | Exit nonzero; no benchmark or resource claim. |
+| `npm run resource:smoke` | Exercise the owned-process resource harness briefly; targets remain UNAVAILABLE. |
+| `npm run resource:profile` | Private sampled allocation diagnostic; targets remain UNAVAILABLE. |
+| `npm run resource:run` | Run the paced resource-small-v1 workload for about five minutes with the serving runtime policy and save a private report. No-argument invocation refuses to run. |
 
 After explicit initialization below, run `npm start`. The example configuration listens at http://127.0.0.1:3000. `GET /api/v1/health/live` reports process availability; `GET /api/v1/health/ready` checks current clock/storage readiness. Frontend pages are being developed separately and still need API/browser integration verification. `dist` is generated public output; no hosted deployment is established.
 
-Implemented auth routes are `POST /api/v1/auth/login`, `GET /api/v1/auth/session` and `POST /api/v1/auth/logout`. POST requires JSON, the exact configured frontend Origin and a UUID X-Idempotency-Key; authenticated POST also requires the session's X-CSRF-Token. Login returns safe actor metadata, absolute expiry and page-memory CSRF. The opaque cookie is HttpOnly/SameSite=Strict/host-only and Secure except explicit loopback HTTP. GET session never renews the two-hour deadline. [API notes](docs/API.md) list the queue/navigation/patient-card/consent routes, versions, fields and role boundaries. Clinical query/capture/export and AI endpoints remain safe 404.
+Implemented auth routes are `POST /api/v1/auth/login`, `GET /api/v1/auth/session` and `POST /api/v1/auth/logout`. POST requires JSON, the exact configured frontend Origin and a UUID X-Idempotency-Key; authenticated POST also requires the session's X-CSRF-Token. Login returns safe actor metadata, absolute expiry and page-memory CSRF. The opaque cookie is HttpOnly/SameSite=Strict/host-only and Secure except explicit loopback HTTP. GET session never renews the two-hour deadline. [API notes](docs/API.md) list the implemented clinical, queue, consent, telemetry and optional text routes. Legacy bypass routes remain unavailable.
 
 ## Configuration and private data
 
-`.env.example` documents PORT, HOST, FRONTEND_ORIGIN, API_ORIGIN, VAULTMED_DB_PATH, USE_MOCK_ASR, SARVAM_ENABLED, SARVAM_API_KEY and PUBLIC_API_BASE_URL. Keep `.env` private. Defaults use loopback HTTP, mock voice and disabled text AI. Do not paste provider keys into chat. No provider account, payment or request is needed for setup.
+`.env.example` documents PORT, HOST, FRONTEND_ORIGIN, API_ORIGIN, VAULTMED_DB_PATH, USE_MOCK_ASR, SARVAM_ENABLED, SARVAM_API_KEY, SARVAM_ACCESS_FILE and PUBLIC_API_BASE_URL. Keep `.env` private. Public defaults use loopback HTTP, mock voice and disabled text AI; the operator's current local configuration enables verified gated text. Do not paste provider keys into chat. No provider account, payment or request is needed for the default setup.
 
 Only the parsed PUBLIC_API_BASE_URL enters browser configuration. Database/manifest paths are restricted to ignored data/runtime, data/backups, data/reports or data/test-runs directories; data/fixtures is for tracked credential-free source inputs. The seed contains four fictional patients, seven fixed accounts, rooms 12/18, waiting/current/absent checkpoints, penicillin-positive and discontinued-Ecosprin sources, and a scoped latex-negative source. No mental-health diagnosis is inferred. Capture supports three offline scripted examples or manual text, then save/exact review/one committed batch per encounter. Manual text creates no automatic items; simulated transcription processes no audio. Six exact clinical questions return source-cited, limited-vault evidence under current consent. Optional checks return NOT_EVALUATED because no sourced, clinician-reviewed interaction rules are installed. Sample navigation is bilingual and supports step-free filtering, with no surveyed-accessibility claim. See [API contract](docs/API.md).
 
 Reviewed summary/FHIR routes use only the committed encounter batch and reject later-corrected sources. Clinician output requires current patient-approved summary:export; own-patient output continues after closure. One shared build slot and a 1 MiB complete-output cap apply. The limited Composition-first local R4 mapping supports prescriptions/conditions and retains other statements narratively; application preflight is not official validation, ABDM conformance or a signature. Own-patient audit downloads include their release audit, fixed complete bound, chain-check result and exact canonical-content SHA-256 checksum. The standalone integrity route is patient-only; a detected mismatch reports FAIL without clinical values.
+
+Optional Sarvam text routes classify a question into one supported local topic or propose sections from saved notes. The backend supplies evidence; generated prose never commits itself. Notes-only drafting needs no history grant; including history requires current consent before sending, storing and delivering. One in-flight call, durable three/minute and thirty/dataset reservation limits, bounded context/output and no automatic provider retry apply. Enabled configuration and a fresh private operator confirmation are both required. The ai credit command writes it only on explicit operator input; ordinary setup/tests never do. Live smoke uses an isolated temporary file. Missing/expired credit disables AI while manual/local functions continue. It is not an automatic balance check or guarantee of free usage. Voice stays simulated/manual; see AI.md for activation/renewal and actual results.
 
 The default working database is not initialized by install/build/test. Explicit initialization requires a private password for each fixed username: staff, doctor12, doctor18 and patient-a through patient-d. Passwords are 12–128 characters, hashed with Argon2id outside transactions, and never written into fixtures or receipts. The CLI prompts without echo; private automation may pass a bounded username/password JSON map through stdin with --passwords-stdin. Never put passwords in arguments, committed files or chat. Initialization creates no sessions or grants. Source dates remain source dates; actual initialization binds event recording time before hashing and records its own audit.
 
@@ -70,14 +78,16 @@ Verification checks actual SQLite >=3.51.3, WAL/FULL/FK/50 ms busy settings, sch
 
 | Path | Ownership |
 | --- | --- |
-| frontend/login, patients, encounter, patient-visit | Separate HTML/CSS/JavaScript page shells; no implemented workflows. |
+| frontend/login, patients, encounter, patient-visit | Separately developed HTML/CSS/JavaScript pages; browser workflow verification remains separate. |
 | frontend/shared | Public configuration, Tailwind source, memory-only API/session helpers and text-safe DOM helpers. |
 | backend and backend/services | Storage/auth/coordinators, queue/consent/navigation, capture/review/commit, cited reads, reviewed summary/local R4 and own-patient audit output. |
 | data/fixtures | Validated fictional seed, optional offline-ASR registry and sample map. |
 | data/runtime, backups, reports, test-runs | Private generated directories; ignored by Git and excluded from build. |
 | assets | Public CSS/images/icons/fonts; generated Tailwind is ignored. |
 | scripts | Build, environment verification and optional Windows runtime helper. |
-| tests | Storage/recovery, HTTP auth/queue/consent/capture/clinical/output/audit, coordinator races, browser helpers, canonical vectors, browser/runtime/AI TODOs and unfinished resource runner. |
+| tests | Storage/recovery, HTTP workflows/output/audit, coordinator races, browser helpers, canonical vectors, stubbed AI, telemetry, forced drain and the explicit owned-process resource runner. |
 | docs and .github/workflows | App-owned status and setup CI; remote CI results require an actual run. |
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Hosted origins, cookies, TLS/proxy settings and persistence remain deployment work; there is no production identity, medical safety or compliance guarantee.
+
+[Render preparation](docs/RENDER.md) includes a schema-validated paid single-service/disk candidate, explicit private first initialization of fictional data and stopped runtime maintenance. Repository configuration is prepared; the service/disk has not been provisioned or tested on Render. Frontend–backend integration remains deferred. The user accepted **89.24 MB local peak RSS** and stopped further peak tuning; [MEMORY.md](docs/MEMORY.md) records every retained approach, the rejected experiment and final results. Serving, deployment, tests and resource npm scripts select a 1 MiB V8 nursery semi-space, without capping old-space or forcing GC; see [runtime tradeoffs and measured limits](docs/OPERATIONS.md#resource-run). Optional `npm run resource:profile` establishes no performance target and adds no public profiler.

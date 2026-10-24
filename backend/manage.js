@@ -88,8 +88,8 @@ function passwordsFor(seed, passwords) {
 }
 function reserve(file) { const handle = openSync(file,'wx',0o600); closeSync(handle); }
 
-export async function initializeDatabase(value, { passwords, now = Date.now(), seedLabel = 'opd-demo-v1' } = {}) {
-  const { seed, map, mock } = loadFixtures();
+export async function initializeDatabase(value, { passwords, now = Date.now(), seedLabel = 'opd-demo-v1', fixtureDirectory } = {}) {
+  const { seed, map, mock } = loadFixtures(fixtureDirectory);
   requireStorage(seedLabel === seed.seed_label, 'UNSUPPORTED_SEED');
   const file = privatePath(value, { createParents: true });
   if (existsSync(file)) {
@@ -257,7 +257,7 @@ async function privatePasswords(stdinMode) {
   return passwords;
 }
 
-export async function main(args=process.argv.slice(2)) {
+export async function main(args=process.argv.slice(2),{env=process.env,output=value=>console.log(JSON.stringify(value,null,2))}={}) {
   const parsed=parseArgs({args,allowPositionals:true,strict:true,options:{db:{type:'string'},seed:{type:'string'},
     out:{type:'string'},backup:{type:'string'},'new-db':{type:'string'},'passwords-stdin':{type:'boolean'},help:{type:'boolean',short:'h'}}});
   const options=parsed.values; const [command]=parsed.positionals;
@@ -266,7 +266,7 @@ export async function main(args=process.argv.slice(2)) {
   const allowed={init:['db','seed','passwords-stdin'],verify:['db'],backup:['db','out'],restore:['backup','new-db'],
     reset:['db','new-db','seed','out','passwords-stdin']}[command];
   requireStorage(Object.keys(options).every(key=>allowed.includes(key)),'INVALID_COMMAND_OPTION');
-  const db=command==='restore'?null:(options.db ?? loadStorageSettings().dbPath);
+  const db=command==='restore'?null:(options.db ?? loadStorageSettings(env).dbPath);
   const required=(key)=>{requireStorage(typeof options[key]==='string','MISSING_COMMAND_OPTION');return options[key];};
   let result;
   if(command==='verify') result=verifyDatabase(db);
@@ -282,7 +282,7 @@ export async function main(args=process.argv.slice(2)) {
         await resetDatabase(db,destination,{passwords,seedLabel:options.seed,backupOut:options.out});
     }
   }
-  console.log(JSON.stringify(result,null,2));
+  output(result);return result;
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href) {
   try {await main();} catch(error) {

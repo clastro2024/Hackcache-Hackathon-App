@@ -10,11 +10,12 @@ export const termKeys = ['ecosprin_demo', 'metformin_demo', 'telmisartan_demo', 
 export const scopes = ['triage:read', 'vault:query', 'affirmation:run', 'summary:export', 'vault:read'];
 
 export function xmlText(value) {
-  return [...value].every(char => {
+  for(const char of value) {
     const cp = char.codePointAt(0);
-    return cp === 9 || cp === 10 || cp === 13 || (cp >= 32 && cp <= 0x10ffff &&
-      !(cp >= 0xd800 && cp <= 0xdfff) && cp !== 0xfffe && cp !== 0xffff);
-  });
+    if(!(cp === 9 || cp === 10 || cp === 13 || (cp >= 32 && cp <= 0x10ffff &&
+      !(cp >= 0xd800 && cp <= 0xdfff) && cp !== 0xfffe && cp !== 0xffff)))return false;
+  }
+  return true;
 }
 export const text = max => z.string().min(1).max(max).refine(xmlText).refine(value=>value.trim().length>0);
 const nullableText = max => text(max).nullable();
@@ -108,6 +109,18 @@ const queryInteger=max=>z.string().regex(/^(0|[1-9]\d*)$/u).transform(Number).pi
 export const historyQuerySchema=z.strictObject({encounter_id:id.optional(),after_sequence:queryInteger(Number.MAX_SAFE_INTEGER).default(0),
   limit:queryInteger(100).pipe(integer.min(1)).default(50),as_of_sequence:queryInteger(Number.MAX_SAFE_INTEGER).optional()});
 export const clinicalQuerySchema=z.strictObject({encounter_id:id.optional()});
+export const aiAskSchema=z.strictObject({encounter_id:id,question:text(1000)});
+export const aiBriefSchema=z.strictObject({draft_id:id,expected_draft_version:integer.min(1),include_history:z.boolean().default(false)});
+export const aiTopicSchema=z.strictObject({topic_key:z.enum([...topics,'UNSUPPORTED','AMBIGUOUS'])});
+export const briefKeys=['PRESENTING_CONCERN','REPORTED_HISTORY','SUPPLIED_FINDINGS','ASSESSMENT_PLAN','MEDICATIONS','FOLLOW_UP','MISSING_UNCERTAIN'];
+export const briefSectionSchema=z.strictObject({text:text(3000).nullable(),note_quotes:z.array(text(1000)).max(5),event_refs:z.array(z.string().regex(/^E(?:[1-9]|1[0-9]|20)$/u)).max(20)});
+export const aiBriefResultSchema=z.strictObject(Object.fromEntries(briefKeys.map(key=>[key,briefSectionSchema])));
+export const aiUsageSchema=z.strictObject({prompt_tokens:integer.nullable(),completion_tokens:integer.nullable(),total_tokens:integer.nullable()});
+export const aiGenerationSchema=z.strictObject({generation_id:z.uuid(),provider:z.literal('SARVAM'),model:z.literal('sarvam-105b'),
+  prompt_version:z.enum(['topic-interpretation-v1','consultation-brief-v1']),generated_at:timestamp,usage:aiUsageSchema,provider_latency_ms:z.number().finite().min(0)});
+export const aiProposalSchema=z.strictObject({proposal_schema_version:z.literal('consultation-proposal-v1'),sections:aiBriefResultSchema,
+  generation:aiGenerationSchema,source_version:integer.min(1),source_hash:hash,include_history:z.boolean(),
+  history_event_ids:z.array(id).max(20),history_as_of_sequence:integer.nullable(),proposal_hash:hash});
 export const auditQuerySchema=z.strictObject({after_audit_id:queryInteger(Number.MAX_SAFE_INTEGER).default(0),
   through_audit_id:queryInteger(Number.MAX_SAFE_INTEGER).optional(),limit:queryInteger(100).pipe(integer.min(1)).default(50)});
 
@@ -129,6 +142,8 @@ export const receiptOutcomeSchema = z.strictObject({
   draft_state:z.enum(['DRAFT','REVIEWED','COMMITTED']).optional(),reviewed_payload_hash:hash.optional(),
   first_sequence:integer.min(1).optional(),last_sequence:integer.min(1).optional(),head_hash:hash.optional(),
   ruleset_version:id.optional(),query_id:id.optional(),
+  topic_key:z.enum([...topics,'UNSUPPORTED','AMBIGUOUS']).optional(),ai_status:z.enum(['COMPLETED','UNAVAILABLE','FAILED']).optional(),
+  ai_error_code:text(64).optional(),generation_mode:z.enum(['LIVE_SARVAM','LOCAL_FALLBACK']).optional(),generation:aiGenerationSchema.optional(),
 });
 
 const requiredText=max=>text(max).refine(value=>value.trim().length>0);
@@ -193,6 +208,16 @@ const errors = {
   EXPORT_BUSY:[429,'An output build is running. Try again shortly.','NONE'],
   EXPORT_TOO_LARGE:[413,'The complete output exceeds the export limit.','NONE'],
   FHIR_BUILD_FAILED:[500,'The local document build failed its application checks.','NONE'],
+  AI_UNAVAILABLE:[503,'Live text assistance is unavailable. Use the local/manual workflow.','NONE'],
+  AI_BUSY:[429,'A text assistance request is running. Try again deliberately later.','NONE'],
+  AI_RATE_LIMITED:[429,'The local text assistance request limit is reached.','NONE'],
+  AI_BUDGET_EXHAUSTED:[429,'The fictional dataset text assistance reservation limit is reached.','NONE'],
+  AI_REQUEST_IN_PROGRESS:[409,'This text assistance intent is already in progress.','NONE'],
+  AI_OUTCOME_UNKNOWN:[409,'This upstream attempt cannot be safely repeated. Use local/manual care.','NONE'],
+  AI_CONTEXT_CHANGED:[409,'The saved notes or source context changed. Refresh before a new generation.','REFRESH_STATE'],
+  AI_CONTEXT_TOO_LARGE:[413,'The complete text assistance context exceeds its limit.','NONE'],
+  AI_PROVIDER_UNAVAILABLE:[503,'The text provider is unavailable. No automatic provider retry is made.','NONE'],
+  AI_OUTPUT_INVALID:[503,'The text proposal could not be validated against its source.','NONE'],
   UNSUPPORTED_QUESTION:[422,'Choose one of the six supported clinical questions.','NONE'],
   VALIDATION_ERROR:[422,'Check the permitted request fields.','NONE'], MALFORMED_JSON:[400,'Malformed JSON request.','NONE'],
   PAYLOAD_TOO_LARGE:[413,'Request exceeds the size limit.','NONE'], UNSUPPORTED_MEDIA_TYPE:[415,'Use uncompressed UTF-8 JSON.','NONE'],
@@ -227,4 +252,6 @@ export const auditDetailsSchema = z.strictObject({
   as_of_sequence:integer.optional(),topic_key:z.enum(topics).optional(),ruleset_version:id.optional(),
   generation_id:z.uuid().optional(),mapping_version:z.literal('local-r4-v1').optional(),
   validation_status:z.literal('NOT_RUN').optional(),head_hash:hash.optional(),through_audit_id:integer.optional(),
+  ai_task:z.enum(['ASK','BRIEF']).optional(),idempotency_key:z.uuid().optional(),request_fingerprint:hash.optional(),
+  provider:z.literal('SARVAM').optional(),model:z.literal('sarvam-105b').optional(),usage:aiUsageSchema.optional(),
 });

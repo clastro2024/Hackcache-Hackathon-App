@@ -8,11 +8,19 @@
     "node": "24.x"
   },
   "scripts": {
-    "start": "node --env-file-if-exists=.env backend/server.js",
+    "start": "node --max-semi-space-size=1 --env-file-if-exists=.env backend/server.js",
     "manage": "node --env-file-if-exists=.env backend/manage.js",
+    "ai": "node --env-file-if-exists=.env scripts/sarvam-setup.js",
     "build": "node --env-file-if-exists=.env scripts/build.js",
     "check:environment": "node --env-file-if-exists=.env scripts/check-environment.js",
-    "test": "node --test \"tests/*.test.js\""
+    "deploy:check": "node --env-file-if-exists=.env scripts/render-start.js --check",
+    "deploy:start": "node --max-semi-space-size=1 --env-file-if-exists=.env scripts/render-start.js",
+    "deploy:initialize": "node --max-semi-space-size=1 --env-file-if-exists=.env scripts/render-start.js --initialize-new",
+    "deploy:maintenance": "node --max-semi-space-size=1 --env-file-if-exists=.env scripts/render-start.js --maintenance",
+    "resource:smoke": "node --max-semi-space-size=1 tests/resource-run.js --smoke",
+    "resource:profile": "node --max-semi-space-size=1 tests/resource-run.js --profile",
+    "resource:run": "node --max-semi-space-size=1 tests/resource-run.js --run",
+    "test": "node --max-semi-space-size=1 --test \"tests/*.test.js\""
   },
   "dependencies": {
     "argon2": "0.45.1",
