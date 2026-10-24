@@ -1,6 +1,6 @@
-# Implemented API — through step 4
+# Implemented API — through step 5
 
-All paths below have the `/api/v1` prefix. These APIs use fictional local data. Capture, draft review/commit, cited history and optional unsupported-rule checks are implemented. Reviewed summary/FHIR export remains pending. Pages are developed separately; an API route existing does not establish a connected browser flow.
+All paths below have the `/api/v1` prefix. These APIs use fictional local data. Capture, exact review/commit, cited history, reviewed summary/local FHIR and own-patient audit downloads are implemented. Optional checks disclose unsupported clinical-rule coverage. Pages are developed separately; an API route existing does not establish a connected browser flow.
 
 ## Transport and sessions
 
@@ -123,7 +123,7 @@ All successful clinical reads verify the canonical patient chain, compute outsid
 | GET /vault/patient/{patient_id}/events | Own patient, or clinician plus `encounter_id` and explicitly approved `vault:read`. Query `after_sequence` default 0, `limit` default 50/max 100, optional fixed `as_of_sequence`. |
 | POST /vault/query | Assigned clinician with `vault:query`; strict `{patient_id, encounter_id, question_text}` (1–1,000 characters). |
 | POST /vault/affirmation | Assigned clinician with `affirmation:run`; `{patient_id, encounter_id, intervention_type: MEDICATION|PROCEDURE|DIAGNOSTIC, planned_items: [1–20 strings, each 1–200], rationale?}` (≤500). |
-| GET /audit/integrity-check/{patient_id} | Own patient, or assigned clinician with `encounter_id` and `triage:read`. Actual verified head/count and tamper-evidence limitation. |
+| GET /audit/integrity-check/{patient_id} | Own patient only, no query fields. Actual verified PASS/FAIL, sequence/count, safe first-failure reference and tamper-evidence limitation. |
 
 Event pages return complete event envelopes with previous/event hashes, fixed `as_of_sequence` and `next_after_sequence` or null. Reuse the captured as-of head for later pages; permission is checked on every page. Patient self-access continues after encounter closure and does not use a clinician grant. Active-state projects by entity/current tip in root order into medications, conditions, allergies, procedures and scoped negatives; retracted threads remain only in authorized history. It preserves actual source/occurrence/recording/review dates, report/order/status differences and possible-duplicate warnings. Empty lists never mean a negative assessment.
 
@@ -138,7 +138,44 @@ Only these six deterministic questions are accepted (Unicode NFKC, English case/
 
 Other, negated or compound questions return 422 UNSUPPORTED_QUESTION. Queries return `query_id`, original `question_text`, patient/encounter/as-of, `ruleset_version: demo-topics-v1`, topic, lookup status, certainty, cautious answer, actual `source_citations`, structured cited `facts`, coverage gaps and warnings. COMPLETE yields VERIFIED_POSITIVE, DOCUMENTED_NEGATIVE (with exact dated declaration detail), or NOT_RECORDED_IN_VAULT. Relevant unmapped concepts yield INCOMPLETE/null certainty; independently retained positive and negative declarations yield CONFLICT/null certainty. There is no newest-date winner. Fixture provenance stays FIXTURE_NOT_CLINICALLY_VALIDATED. Stopped prescriptions are historical evidence, not current ingestion or clearance. Replays reconstruct their original as-of/ruleset references under current permission; clinical text is not stored in receipts.
 
-Optional checks currently return `evaluation_status: NOT_EVALUATED`, `ruleset_version: no-active-clinical-rules-v1`, empty findings, cited usable tips and explicit unsupported coverage. No authoritative, clinician-reviewed interaction rules are installed. `doctor_action_required: false` is fixed; no all-clear, safety score, mandatory acknowledgement or commit dependency exists. Summary/FHIR, self-audit history/download, telemetry and optional text AI remain later stages.
+Optional checks currently return `evaluation_status: NOT_EVALUATED`, `ruleset_version: no-active-clinical-rules-v1`, empty findings, cited usable tips and explicit unsupported coverage. No authoritative, clinician-reviewed interaction rules are installed. `doctor_action_required: false` is fixed; no all-clear, safety score, mandatory acknowledgement or commit dependency exists. Telemetry/resource workload, connected pages and optional text AI remain later stages.
+
+## Reviewed summary and local FHIR document
+
+| GET path | Result |
+| --- | --- |
+| /encounters/{id}/summary | Readable JSON from exactly the encounter's committed reviewed batch. |
+| /encounters/{id}/fhir-export | Raw application/fhir+json attachment, Composition-first local R4 4.0.1 mapping. |
+
+No query fields, body, caller-selected patient/event list, profile or mode are accepted. Own-patient access is independent of a clinician grant and continues after closure. Assigned clinician access requires a checked-in open encounter and current patient-approved summary:export for that exact session/patient/facility/purpose. Staff/assistants, other patients/clinicians and emergency grants cannot export. Summary generation never renews consent or changes clinical state. GET requires no CSRF/key and writes no mutation receipt. Use deliberate user actions for read/print/download; automatic frontend actions are not implemented here.
+
+Both routes verify the canonical patient chain, persisted capture hash, actual reviewer/time, complete ordered event IDs and exact reviewed-item/event content. They refuse any batch whose selected event is no longer its entity's current tip. Later unrelated appends do not invalidate the batch. Rendering is local and outside SQL; source/context/permission is rechecked before the durable release audit and final buffered delivery. A lost response/retry may create another generation/release audit, never another clinical event. An audit records permission to release, not proof of saving/printing.
+
+Summary includes `summary_schema_version: reviewed-summary-v1`, `mapping_version: local-r4-v1`, generation UUID/time, dataset/patient/display name, encounter ID/status (OPEN or CLOSED), facility/room labels, captured as-of sequence, committed event IDs, draft ID/committed version, actual review account/display name/time/hash, capture mode/language/fixture/extractor/simulation metadata, `reviewed_text`, statements, sections and warnings. `synthetic: true`, `history_scope: COMMITTED_ENCOUNTER_BATCH`, and `fhir_validation: NOT_RUN` are fixed. Statements preserve complete event envelopes plus previous/event hashes, `render_kind: PRESCRIPTION|CONDITION|OTHER` and plain display text. Sections are CONTEXT, PRESCRIPTIONS, CONDITIONS, OTHER_STATEMENTS, NARRATIVE, PROVENANCE. Only current committed text is used; immutable original text, unrelated history, query answers and optional checks are not imported. Missing optional fields say “Not recorded”; empty sections do not mean clinical absence.
+
+FHIR returns a Bundle of type document with identifier/timestamp/meta.lastUpdated, Composition first, Patient second, then prescribed MedicationRequests, Conditions, actual reviewing demo Practitioner and Encounter. Each resource has a fresh UUID id and matching urn:uuid fullUrl; all references resolve locally. Local underscore/long IDs remain Identifier values or escaped narrative. PRESCRIBED ACTIVE/COMPLETED/DISCONTINUED/UNKNOWN map to active/completed/stopped/unknown; text dose/route/frequency/duration are preserved without unit/timing conversion. Reported prescriptions have reportedBoolean true. No requester/original prescriber, onset, administration, appointment or clinical terminology is invented. Conditions retain provisional/confirmed status and recording time; unknown clinical status is omitted. Reports, administrations, allergies, procedures, dated negatives and retractions remain in narrative/provenance, with no machine-readable resource mapping for those families in this slice. No clinical codes, meta.profile, attestation, signature or ABDM conformance claim is added.
+
+Strict application preflight checks this fixed mapping, supported fields/statuses, item coverage, UUIDs, references, context and escaped XHTML narratives. It is not an official validator. Narratives use fixed div/p/br templates; source characters are escaped, never executable HTML. The selected runtime makes no validator/terminology/provider network call. Headers include X-Export-ID and X-FHIR-Validation: NOT_RUN; FHIR has `Content-Disposition: attachment; filename="vaultmed-<generation UUID>.json"`. Downloads are raw Bundle JSON without an application wrapper; trace/dataset remain headers. Credentialed CORS exposes these headers and Content-Disposition. Separate generations can have different bytes/UUIDs; no offline validation report is inherited.
+
+One summary/FHIR build can run at once across this process; another returns 429 EXPORT_BUSY, Retry-After 1, with no waiting queue. Each complete UTF-8 summary/document is capped at 1 MiB without truncation. Defined failures: 409 SUMMARY_NOT_COMMITTED (no final batch), SUMMARY_OUTDATED (later correction/retraction), OUTPUT_CONTEXT_CHANGED (changed captured context); 503 SUMMARY_SOURCE_INVALID or AUDIT_UNAVAILABLE; 413 EXPORT_TOO_LARGE; 500 FHIR_BUILD_FAILED for failed local application checks. No partial clinical body accompanies an error. Output failure never undoes a clinical commit.
+
+Mapping references: [HL7 R4 documents](https://hl7.org/fhir/R4/documents.html), [MedicationRequest](https://hl7.org/fhir/R4/medicationrequest.html), [Condition](https://hl7.org/fhir/R4/condition.html), [narrative](https://hl7.org/fhir/R4/narrative.html). Official validation, browser printing and interchange remain unverified.
+
+## Patient audit history, integrity and complete download
+
+All three routes require current own-patient authentication with patient:self. Clinician grants, staff/assistance and QR references cannot provide access. The standalone integrity route is now patient-only, aligning the selected final API contract; the earlier step-4 clinician query form is not accepted.
+
+| GET path | Input / result |
+| --- | --- |
+| /audit/patient/{patient_id} | Query after_audit_id default 0, through_audit_id optional captured bound, limit default 50/max 100. Returns complete matched rows for that page, fixed through bound and next_after_audit_id or null. |
+| /audit/integrity-check/{patient_id} | No query. Actual ledger_format v1, status PASS or FAIL, checked_through_sequence, event_count, verified_at and head_hash. FAIL gives safe first_failure_sequence/reason_code and null head, not a reassuring verdict. Operational inability is a safe error. Compatibility integrity_status/checked_events remain on successful results. |
+| /audit/export/{patient_id} | No query. Raw JSON attachment with `{content, sha256}` and a fresh X-Export-ID; no paging/truncation. |
+
+History rechecks ownership on every page and audits access, without moving an explicitly captured through bound. It returns audit IDs, actual actor/patient/encounter/operation/result, UTC recorded_at milliseconds and strict details; these contain no passwords/cookie secrets/CSRF values. Integrity recomputes actual canonical/mirrored event bytes/links; a failed chain never becomes a fixed seal or proof of clinical truth.
+
+Export authorizes first, then in one final write unit appends AUDIT_EXPORT and captures every matched-patient row through that export audit ID, including intervening rows and excluding other patients. Rendering/checksum occurs outside SQL, followed by current session/ownership recheck before delivery. There is no second recursive export audit. Content contains `audit_export_schema_version: patient-audit-v1`, patient/dataset, generation UUID/time, through_audit_id, complete_through_bound true, all bounded audit_events and actual chain_check (PASS or FAIL). The outer sha256 is SHA-256 of the exact UTF-8 canonical content object using sorted compact v1 JSON. Recompute with the same canonical encoding, not arbitrary property-order JSON.stringify. This checksum is not a signature, historical authenticity guarantee or independent anchor.
+
+Complete audit output is capped at 1 MiB; oversized output returns 413 EXPORT_TOO_LARGE and never a partial dossier. An authorized export attempt can remain audited even if later rendering/size/delivery fails. Filenames use `vaultmed-audit-<generation UUID>.json`; no private filesystem paths or credentials enter output. Pagination remains available for authorized history when a complete dossier exceeds the cap. Restore/session invalidation and no-store rules apply to every page/download.
 
 ## Browser helper example
 

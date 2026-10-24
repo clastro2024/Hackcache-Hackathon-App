@@ -155,7 +155,8 @@ test('C07/S HTTP: runtime canonical tampering returns a safe integrity error wit
   f.store.db.prepare("UPDATE clinical_events SET event_json=json_set(event_json,'$.source.original_author','Altered fictional source') WHERE event_id='evt_demo_stop'").run();
   const result=await ask(f);assert.equal(result.body.error,'CLINICAL_INTEGRITY_INVALID');assert.equal(result.status,503);
   assert.equal(result.body.certainty_state,undefined);assert.ok(!result.text.includes('Altered fictional source'));
-  assert.equal((await f.patient.get(`/api/v1/audit/integrity-check/${patientId}`)).body.error,'CLINICAL_INTEGRITY_INVALID');
+  const failed=ok(await f.patient.get(`/api/v1/audit/integrity-check/${patientId}`));
+  assert.equal(failed.status,'FAIL');assert.equal(failed.first_failure_sequence,1);
 });
 
 test('C12/S HTTP: exact grant deadline and emergency scopes guard actual clinical endpoints; new care remains independent',async t=>{

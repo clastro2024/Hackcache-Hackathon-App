@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { auditDetailsSchema, receiptOutcomeSchema, id, hash, integer, text } from '../schemas.js';
+import { auditDetailsSchema, receiptOutcomeSchema, id, hash, integer, text, ApiError } from '../schemas.js';
 import { StorageError, requireStorage } from '../db.js';
-import { canonicalJSON, digest, parseJSON } from './vault.js';
+import { canonicalJSON, digest, parseJSON, verifyPatient } from './vault.js';
 
 const label = z.string().regex(/^[A-Z][A-Z0-9_:.-]{0,63}$/u);
 const auditSchema = z.strictObject({ actor_id: id.nullable(), patient_id: id.nullable(), encounter_id: id.nullable(),
@@ -43,4 +43,38 @@ export function putReceipt(store, input, outcome, now) {
   return safe;
 }
 
-// Self-audit download authorization and final audited release remain a later stage.
+export function patientAuditHead(store,patientId) {
+  requireStorage(store.db.inTransaction,'UNIT_REQUIRED');
+  return store.db.prepare('SELECT COALESCE(MAX(audit_id),0) n FROM audit_events WHERE patient_id=?').get(patientId).n;
+}
+export function auditSnapshot(store,patientId,{through,after=0,limit}={}) {
+  requireStorage(store.db.inTransaction,'UNIT_REQUIRED');
+  id.parse(patientId);integer.parse(through);integer.parse(after);
+  if(!limit) {
+    // Lower bound on actual JSON size before materializing a complete dossier. No truncation.
+    const minimum=store.db.prepare('SELECT COALESCE(SUM(length(CAST(details_json AS BLOB))+80),0) n FROM audit_events WHERE patient_id=? AND audit_id<=?').get(patientId,through).n;
+    if(minimum>1048576) throw new ApiError('EXPORT_TOO_LARGE');
+  }
+  const rows=store.db.prepare(`SELECT * FROM audit_events WHERE patient_id=? AND audit_id>? AND audit_id<=? ORDER BY audit_id${limit?' LIMIT ?':''}`)
+    .all(...[patientId,after,through,...(limit?[integer.min(1).max(100).parse(limit)]:[])]);
+  try {
+    return rows.map(row=>({audit_id:row.audit_id,...auditSchema.parse({actor_id:row.actor_id,patient_id:row.patient_id,encounter_id:row.encounter_id,
+      operation:row.operation,result:row.result,recorded_at:row.recorded_at,details:parseJSON(row.details_json,16384)})}));
+  } catch {throw new StorageError('AUDIT_SOURCE_INVALID');}
+}
+export function patientIntegrity(store,patientId,time) {
+  requireStorage(store.db.inTransaction,'UNIT_REQUIRED');
+  const facility=store.db.prepare('SELECT facility_id FROM schema_meta WHERE singleton=1').get().facility_id;
+  const count=store.db.prepare('SELECT COUNT(*) n FROM clinical_events WHERE patient_id=?').get(patientId).n;
+  const base={ledger_format:'v1',patient_id:patientId,event_count:count,verified_at:new Date(time).toISOString(),
+    limitation:'Hash consistency is tamper evidence, not source truth, a signature or an independent integrity anchor.'};
+  try {
+    const verified=verifyPatient(store.db,patientId,facility);
+    return {...base,status:'PASS',checked_through_sequence:verified.checked_events,head_hash:verified.head_hash,
+      integrity_status:'VALID',checked_events:verified.checked_events};
+  } catch(error) {
+    if(error.code!=='CLINICAL_INTEGRITY_INVALID') throw error;
+    return {...base,status:'FAIL',checked_through_sequence:Math.max(0,(error.failure_sequence ?? 1)-1),
+      first_failure_sequence:error.failure_sequence ?? null,reason_code:'CANONICAL_CHAIN_MISMATCH',head_hash:null,integrity_status:'INVALID'};
+  }
+}

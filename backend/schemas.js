@@ -108,6 +108,8 @@ const queryInteger=max=>z.string().regex(/^(0|[1-9]\d*)$/u).transform(Number).pi
 export const historyQuerySchema=z.strictObject({encounter_id:id.optional(),after_sequence:queryInteger(Number.MAX_SAFE_INTEGER).default(0),
   limit:queryInteger(100).pipe(integer.min(1)).default(50),as_of_sequence:queryInteger(Number.MAX_SAFE_INTEGER).optional()});
 export const clinicalQuerySchema=z.strictObject({encounter_id:id.optional()});
+export const auditQuerySchema=z.strictObject({after_audit_id:queryInteger(Number.MAX_SAFE_INTEGER).default(0),
+  through_audit_id:queryInteger(Number.MAX_SAFE_INTEGER).optional(),limit:queryInteger(100).pipe(integer.min(1)).default(50)});
 
 // Safe metadata only. Domain routes can extend these explicit shapes when implemented.
 export const receiptOutcomeSchema = z.strictObject({
@@ -184,6 +186,13 @@ const errors = {
   INGESTION_BUSY:[429,'Capture capacity is occupied. Try again shortly.','NONE'],
   DRAFT_TOO_LARGE:[413,'The complete saved draft exceeds the size limit.','NONE'],
   CLINICAL_INTEGRITY_INVALID:[503,'Clinical source integrity could not be verified.','NONE'],
+  SUMMARY_NOT_COMMITTED:[409,'This encounter has no committed reviewed summary.','REFRESH_STATE'],
+  SUMMARY_OUTDATED:[409,'This reviewed batch has a later correction or retraction. Read the authorized history.','REFRESH_STATE'],
+  OUTPUT_CONTEXT_CHANGED:[409,'The output context changed. Request a fresh output.','REFRESH_STATE'],
+  SUMMARY_SOURCE_INVALID:[503,'The complete reviewed source could not be verified.','NONE'],
+  EXPORT_BUSY:[429,'An output build is running. Try again shortly.','NONE'],
+  EXPORT_TOO_LARGE:[413,'The complete output exceeds the export limit.','NONE'],
+  FHIR_BUILD_FAILED:[500,'The local document build failed its application checks.','NONE'],
   UNSUPPORTED_QUESTION:[422,'Choose one of the six supported clinical questions.','NONE'],
   VALIDATION_ERROR:[422,'Check the permitted request fields.','NONE'], MALFORMED_JSON:[400,'Malformed JSON request.','NONE'],
   PAYLOAD_TOO_LARGE:[413,'Request exceeds the size limit.','NONE'], UNSUPPORTED_MEDIA_TYPE:[415,'Use uncompressed UTF-8 JSON.','NONE'],
@@ -216,4 +225,6 @@ export const auditDetailsSchema = z.strictObject({
   changed:z.boolean().optional(),
   method:z.enum(['MANUAL','MOCK_ASR']).optional(),fixture_id:id.nullable().optional(),extractor_version:id.optional(),
   as_of_sequence:integer.optional(),topic_key:z.enum(topics).optional(),ruleset_version:id.optional(),
+  generation_id:z.uuid().optional(),mapping_version:z.literal('local-r4-v1').optional(),
+  validation_status:z.literal('NOT_RUN').optional(),head_hash:hash.optional(),through_audit_id:integer.optional(),
 });

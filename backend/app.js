@@ -17,6 +17,7 @@ import { createQueue } from './services/queue.js';
 import { createCapture } from './services/capture.js';
 import { createVault } from './services/vault.js';
 import { runChecks } from './services/checks.js';
+import { createOutput } from './services/output.js';
 
 const pages=['login','patients','encounter','patient-visit'];
 const healthPaths=new Set(['/api/v1/health/live','/api/v1/health/ready']);
@@ -24,7 +25,7 @@ const authPaths=new Set(['/api/v1/auth/login','/api/v1/auth/session','/api/v1/au
 const allowedHeaders=['content-type','x-csrf-token','x-idempotency-key'];
 const routeId='[A-Za-z0-9_-]{1,128}';
 const domainPaths=new RegExp(`^/api/v1/(?:queue/register|queue/(?:rooms|display)/${routeId}|queue/rooms/${routeId}/(?:call-next|pause|resume)|queue/tokens/${routeId}/(?:repeat-call|absent|recall|transfer|withdraw)|encounters/${routeId}/(?:check-in|complete|break-glass|allowance/(?:request|respond|clarify|status|revoke))|patients/me/visit|navigation/route)$`,'u');
-const clinicalPaths=new RegExp(`^/api/v1/(?:scribe/(?:transcribe|commit|drafts/${routeId}/(?:save|review))|encounters/${routeId}/draft|vault/(?:query|affirmation|patient/${routeId}/(?:events|active-state))|audit/integrity-check/${routeId})$`,'u');
+const clinicalPaths=new RegExp(`^/api/v1/(?:scribe/(?:transcribe|commit|drafts/${routeId}/(?:save|review))|encounters/${routeId}/(?:draft|summary|fhir-export)|vault/(?:query|affirmation|patient/${routeId}/(?:events|active-state))|audit/(?:integrity-check|patient|export)/${routeId})$`,'u');
 
 export function createClock(clock={utc:Date.now,mono:()=>performance.now()}) {
   let utc=-1,mono=-1,trusted=true;
@@ -89,9 +90,10 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
   const queue=createQueue(store,auth,operations,consent,{now,map:fixtures.map});
   const capture=createCapture(store,auth,operations,{now,settings,mock:fixtures.mock,hooks});
   const vault=createVault(store,auth,operations,{now});
+  const output=createOutput(store,auth,operations,{now,hooks});
   const app=express();app.disable('x-powered-by');app.disable('etag');app.set('trust proxy',false);
   app.enable('case sensitive routing');app.enable('strict routing');
-  Object.assign(app.locals,{store,auth,operations,consent,queue,capture,vault,fixtures,now,draining:false,
+  Object.assign(app.locals,{store,auth,operations,consent,queue,capture,vault,output,fixtures,now,draining:false,
     close(){app.locals.draining=true;auth.close();store.close();}});
   app.use((req,res,next)=>{res.locals.requestId=randomUUID();res.set('X-Request-ID',res.locals.requestId);next();});
   app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],
@@ -107,7 +109,7 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
     const origin=req.get('Origin');
     if(origin===settings.frontendOrigin) {
       res.set('Access-Control-Allow-Origin',origin);res.set('Access-Control-Allow-Credentials','true');
-      res.set('Access-Control-Expose-Headers','X-Request-ID, X-Dataset-ID, Retry-After');
+      res.set('Access-Control-Expose-Headers','X-Request-ID, X-Dataset-ID, Retry-After, X-Export-ID, X-FHIR-Validation, Content-Disposition');
     }
     if(req.method==='OPTIONS') {
       const requested=(req.get('Access-Control-Request-Headers') ?? '').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
@@ -245,9 +247,25 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
     async(req,res)=>clinicalResponse(res,await vault.query(ref(req),intent(req))));
   app.post('/api/v1/vault/affirmation',postHeaders,body,validate(schemas.checkSchema),
     async(req,res)=>clinicalResponse(res,await runChecks(vault,ref(req),intent(req))));
-  app.get('/api/v1/audit/integrity-check/:patient_id',parameters('patient_id'),query(schemas.clinicalQuerySchema),
-    async(req,res)=>clinicalResponse(res,await vault.read(ref(req),{patientId:req.params.patient_id,
-      encounterId:req.validatedQuery.encounter_id,kind:'integrity'})));
+  for(const format of ['summary','fhir-export']) {
+    app.get(`/api/v1/encounters/:encounter_id/${format}`,parameters('encounter_id'),query(emptySchema),async(req,res)=>{
+      const result=await output.generate(ref(req),req.params.encounter_id,format,{
+        request_id:res.locals.requestId,server_time:new Date(now()).toISOString()});
+      const buffer=result.release();
+      res.set('X-Export-ID',result.generationId);res.set('X-FHIR-Validation','NOT_RUN');
+      if(format==='fhir-export') res.set('Content-Disposition',`attachment; filename="vaultmed-${result.generationId}.json"`);
+      return res.type(format==='summary'?'application/json':'application/fhir+json').send(buffer);
+    });
+  }
+  app.get('/api/v1/audit/patient/:patient_id',parameters('patient_id'),query(schemas.auditQuerySchema),
+    async(req,res)=>clinicalResponse(res,await operations.auditHistory(ref(req),req.params.patient_id,req.validatedQuery)));
+  app.get('/api/v1/audit/integrity-check/:patient_id',parameters('patient_id'),query(emptySchema),
+    async(req,res)=>clinicalResponse(res,await operations.integrity(ref(req),req.params.patient_id)));
+  app.get('/api/v1/audit/export/:patient_id',parameters('patient_id'),query(emptySchema),async(req,res)=>{
+    const result=await operations.exportOwnAudit(ref(req),req.params.patient_id);const buffer=result.release();
+    res.set('X-Export-ID',result.generationId);res.set('Content-Disposition',`attachment; filename="vaultmed-audit-${result.generationId}.json"`);
+    return res.type('application/json').send(buffer);
+  });
   app.use('/api',(req,res,next)=>next(new ApiError('RESOURCE_UNAVAILABLE')));
   app.get('/',(req,res)=>res.redirect(302,'/login/'));
   for(const name of [...pages,'shared']) app.use(`/${name}`,express.static(path.join(APP_ROOT,'frontend',name),{dotfiles:'deny',index:'index.html',fallthrough:false}));

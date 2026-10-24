@@ -143,6 +143,7 @@ export function verifyPatient(db, patientId, facilityId) {
   const threads = new Map();
   const seen = new Set();
   for (let index = 0; index < rows.length; index += 1) {
+    try {
     const row = rows[index];
     let event;
     try { event = eventSchema.parse(parseJSON(row.event_json, 65536)); } catch { fail(); }
@@ -159,6 +160,10 @@ export function verifyPatient(db, patientId, facilityId) {
     }
     validateThread(event, threads, seen);
     previous = row.event_hash;
+    } catch(error) {
+      if(error.code==='CLINICAL_INTEGRITY_INVALID') error.failure_sequence=index+1;
+      throw error;
+    }
   }
   return { patient_id: patientId, checked_events: rows.length, head_hash: previous };
 }
@@ -170,7 +175,7 @@ export function verifyChains(db) {
     .map(row => verifyPatient(db, row.patient_id, facility));
 }
 
-// Storage primitive only. Live writes remain unavailable until exact reviewed commit exists.
+// Fixture storage primitive; live writes use the persisted reviewed draft entry below.
 export function appendEvents(store, values, { fixtureSeed = false } = {}) {
   if (!store.inWriteUnit) throw vaultError('WRITE_UNIT_REQUIRED');
   if (!fixtureSeed) throw vaultError('REVIEWED_COMMIT_REQUIRED');
@@ -344,8 +349,6 @@ export function createVault(store,auth,operations,{now}) {
           as_of_sequence:source.as_of_sequence,replayed:source.replayed};
         if(compute) return compute(source,shared);
         if(kind==='active-state') return {...shared,...project(source,now())};
-        if(kind==='integrity') return {...shared,integrity_status:'VALID',checked_events:source.as_of_sequence,head_hash:source.head_hash,
-          limitation:'Hash consistency is tamper evidence, not proof of source truth or an independent signature.'};
         const page=source.rows.filter(row=>row.event.sequence>(query.after_sequence ?? 0)).slice(0,query.limit ?? 50);
         return {...shared,events:page,next_after_sequence:page.at(-1)?.event.sequence<source.as_of_sequence?page.at(-1).event.sequence:null};
       },

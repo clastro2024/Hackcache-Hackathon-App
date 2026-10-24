@@ -1,7 +1,9 @@
 import { types } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import { retryUnit } from './db.js';
 import { ApiError, receiptOutcomeSchema } from './schemas.js';
-import { appendAudit, findReceipt, putReceipt, fingerprint } from './services/audit.js';
+import { appendAudit, findReceipt, putReceipt, fingerprint, auditSnapshot, patientAuditHead, patientIntegrity } from './services/audit.js';
+import { canonicalJSON, digest } from './services/vault.js';
 
 const promise=value=>value && typeof value.then==='function';
 const sync=fn=>{if(typeof fn!=='function' || types.isAsyncFunction(fn)) throw new ApiError('INTERNAL_ERROR');};
@@ -73,5 +75,58 @@ export function createOperations(store,auth,{now,hooks={}}) {
     }
     throw new ApiError('IDEMPOTENCY_CONFLICT');
   }
-  return {executeCommand,readProtected};
+  async function auditHistory(ref,patientId,query) {
+    auth.admitSensitive(ref);
+    return readProtected(ref,{authorize:()=>auth.ownPatient(ref,patientId),maxBytes:1048576,
+      capture:()=>{
+        const head=patientAuditHead(store,patientId),through=query.through_audit_id ?? head;
+        if(through>head || query.after_audit_id>through) throw new ApiError('VALIDATION_ERROR');
+        const rows=auditSnapshot(store,patientId,{through,after:query.after_audit_id,limit:query.limit});
+        const last=rows.at(-1)?.audit_id;
+        const more=last!==undefined && Boolean(store.db.prepare('SELECT 1 FROM audit_events WHERE patient_id=? AND audit_id>? AND audit_id<=? LIMIT 1').get(patientId,last,through));
+        return {source:{patient_id:patientId,through_audit_id:through,audit_events:rows,next_after_audit_id:more?last:null},through,
+          hash:digest(canonicalJSON(rows))};
+      },compute:source=>source,
+      recheck:(_ctx,snapshot)=>{
+        const rows=auditSnapshot(store,patientId,{through:snapshot.through,after:query.after_audit_id,limit:query.limit});
+        if(digest(canonicalJSON(rows))!==snapshot.hash) throw new ApiError('OUTPUT_CONTEXT_CHANGED');
+      },audit:(_ctx,snapshot)=>({patient_id:patientId,encounter_id:null,operation:'AUDIT_HISTORY',result:'AUTHORIZED',details:{through_audit_id:snapshot.through}})});
+  }
+  async function integrity(ref,patientId) {
+    auth.admitSensitive(ref);
+    return readProtected(ref,{authorize:()=>auth.ownPatient(ref,patientId),maxBytes:8192,
+      capture:()=>({source:patientIntegrity(store,patientId,now())}),compute:source=>source,
+      recheck:(_ctx,snapshot)=>{
+        const current=patientIntegrity(store,patientId,now());
+        const stable=value=>({...value,verified_at:null});
+        if(fingerprint(stable(current))!==fingerprint(stable(snapshot.source))) throw new ApiError('OUTPUT_CONTEXT_CHANGED');
+      },audit:(_ctx,snapshot)=>({patient_id:patientId,encounter_id:null,operation:'INTEGRITY_CHECK',result:snapshot.source.status,
+        details:{as_of_sequence:snapshot.source.checked_through_sequence}})});
+  }
+  async function exportOwnAudit(ref,patientId) {
+    auth.admitSensitive(ref);store.runUnit(false,()=>auth.ownPatient(ref,patientId));
+    const generationId=randomUUID();
+    if(hooks.beforeAuditExport) await hooks.beforeAuditExport();
+    // This specialized final unit includes every intervening matched row and its own release audit.
+    const snapshot=await retryUnit(store,true,()=>{
+      const ctx=auth.ownPatient(ref,patientId),chain=patientIntegrity(store,patientId,now());
+      const through=appendAudit(store,{actor_id:ctx.actor.account_id,patient_id:patientId,encounter_id:null,
+        operation:'AUDIT_EXPORT',result:'AUTHORIZED',recorded_at:now(),details:{generation_id:generationId,as_of_sequence:chain.checked_through_sequence}});
+      const dataset=store.db.prepare('SELECT dataset_id FROM schema_meta WHERE singleton=1').get();
+      return {audit_export_schema_version:'patient-audit-v1',patient_id:patientId,dataset_id:dataset.dataset_id,generation_id:generationId,
+        generated_at:new Date(now()).toISOString(),through_audit_id:through,complete_through_bound:true,
+        audit_events:auditSnapshot(store,patientId,{through}),chain_check:chain,
+        checksum_limitation:'SHA-256 checks these exported bytes; it is not a signature or an independent authenticity anchor.'};
+    });
+    if(hooks.afterAuditExportCommit) await hooks.afterAuditExportCommit();
+    const canonical=canonicalJSON(snapshot),hash=digest(canonical);
+    const buffer=Buffer.from(`{"content":${canonical},"sha256":"${hash}"}`,'utf8');
+    if(buffer.length>1048576) throw new ApiError('EXPORT_TOO_LARGE');
+    let released=false;
+    return {generationId,release(){
+      if(released) throw new ApiError('INVALID_TRANSITION');store.runUnit(false,()=>auth.ownPatient(ref,patientId));
+      released=true;return buffer;
+    }};
+  }
+  return {executeCommand,readProtected,auditHistory,integrity,exportOwnAudit};
 }
