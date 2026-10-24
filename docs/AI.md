@@ -108,6 +108,6 @@ The missing-opt-in guard was checked offline and refused before any provider req
 1. The bounded evaluation is complete with the classification limitations above. Broader multilingual/statistical quality and clinical validity remain unestablished; no expanded evaluation or automatic prompt-tuning loop is required for this MVP.
 2. Renew local confirmation only after a new dashboard balance check when needed. Existing configuration remains enabled until expiry; there is no automatic renewal.
 3. Apply the prepared Render setup when requested, supplying the private API key and fresh credit secret file, then verify actual hosted behavior. No service/disk/secret has been provisioned remotely.
-4. Verify the new frontend controls separately: explicit topic/mode labels, reviewable proposals, stale/revoked result clearing and visible failure/fallback behavior. This backend evaluation does not establish browser acceptance.
+4. The existing frontend controls are now locally checked with stub AI, including an 11-second response, the interpreted-topic metadata, notes-only proposal preservation and revocation clearing; see STATUS.md. Hosted behavior and live-model quality remain separate. The earlier backend evaluation does not itself establish browser acceptance.
 
 No paid top-up/plan/fallback is authorized. Use synthetic data only. The reported 99 INR is the pre-evaluation dashboard balance; check the dashboard before later live evaluation/renewal.

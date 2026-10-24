@@ -42,7 +42,7 @@ The seeded ledger example is bound to `doctor12` and `patient-a`. New local regi
 
 ## Optional AI
 
-Default setup requires no API key and makes no live AI calls. Voice is simulated/manual. The encounter page includes an optional six-topic text-interpretation choice and a consultation-brief proposal control; their complete browser integration still needs verification. A proposal must be deliberately used/edited, saved and reviewed before commit. To deliberately activate Sarvam text, follow [AI setup](AI.md), supply the key only in private server configuration and confirm actual positive promotional credit. `npm run ai -- status` checks readiness without calling the provider. Never commit `.env`, passwords, databases or credit confirmations. Credit confirmation expires; it is not a balance API or a guarantee of free usage.
+Default setup requires no API key and makes no live AI calls. Voice is simulated/manual. The encounter page includes an optional six-topic text-interpretation choice and a consultation-brief proposal control; their local browser integration is checked with stubbed AI; hosted/live-model behavior still needs verification. A proposal must be deliberately used/edited, saved and reviewed before commit. To deliberately activate Sarvam text, follow [AI setup](AI.md), supply the key only in private server configuration and confirm actual positive promotional credit. `npm run ai -- status` checks readiness without calling the provider. Never commit `.env`, passwords, databases or credit confirmations. Credit confirmation expires; it is not a balance API or a guarantee of free usage.
 
 ## Checks and hosting
 

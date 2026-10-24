@@ -41,7 +41,8 @@ export function createApiClient({base=API_BASE_URL,fetcher=(...args)=>fetch(...a
       try {
         response=await fetcher(route(path,query),{method:intent?'POST':'GET',credentials:'include',cache:'no-store',redirect:'error',
           headers:intent?{'Content-Type':'application/json','X-Idempotency-Key':intent.key,...(csrf?{'X-CSRF-Token':csrf}:{})}:{},
-          ...(intent?{body:state.body}:{}),signal:AbortSignal.timeout(10000)});
+          // Text generation has a 20-second server deadline; let its safe result arrive.
+          ...(intent?{body:state.body}:{}),signal:AbortSignal.timeout(intent && path.startsWith('/ai/')?25000:10000)});
         const nextDataset=response.headers.get('X-Dataset-ID');
         if(requestEpoch!==epoch) throw new RequestError('CONTEXT_CHANGED');
         if(nextDataset && dataset && nextDataset!==dataset) {
@@ -53,6 +54,8 @@ export function createApiClient({base=API_BASE_URL,fetcher=(...args)=>fetch(...a
         if(response.ok) {if(intent) pending.delete(intent);return body;}
         error=new RequestError(/^[A-Z][A-Z0-9_]{0,63}$/u.test(body?.error ?? '')?body.error:'REQUEST_FAILED',{
           status:response.status,retry_strategy:body.retry_strategy,commit_state:body.commit_state,request_id:body.request_id,intent});
+        // A reserved generation may still finish: retain its key for deliberate reconciliation.
+        if(intent && path.startsWith('/ai/') && error.code==='AI_REQUEST_IN_PROGRESS') error.commit_state='UNKNOWN';
       } catch(cause) {
         if(cause instanceof RequestError) throw cause;
         notify('NETWORK_UNAVAILABLE');

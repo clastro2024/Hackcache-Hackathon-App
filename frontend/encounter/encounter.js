@@ -143,7 +143,7 @@ function applyAllowance(value,started) {
     const request=value.request,state=request?.request_state;
     const title=state==='CLARIFICATION_REQUESTED'?'Patient asked why':state==='REQUESTED'?'Waiting for the patient’s choice':state==='DENIED'?'History sharing declined':'History is not shared';
     const copy=state==='CLARIFICATION_REQUESTED'?request.clarification_note || 'Explain the purpose to the patient.':
-      state==='REQUESTED'?'The request lasts up to five minutes. New care can continue while the patient decides.':'Request sharing only when needed for this consultation. New care can continue without it.';
+      state==='REQUESTED'?'The request lasts up to five minutes and ends if you sign out. The patient can respond on their device, or permitted staff can assist. New care can continue.':'Request sharing only when needed for this consultation. New care can continue without it.';
     notice('history-access',title,copy,'neutral');get('request-region').hidden=false;
     setText(get('request-access'),state==='CLARIFICATION_REQUESTED'?'Explain why':state==='REQUESTED'?'View sharing request':'Request history sharing');
   } else {
@@ -209,7 +209,7 @@ function renderHistory() {
 }
 function renderAnswer(value) {
   const body=get('answer');body.replaceChildren(node('p','field-help',`Question: ${value.question_text}`),node('p','state-label',value.certainty_state?human(value.certainty_state):`${human(value.lookup_status)} · no certainty verdict`),node('p','',value.answer_text));
-  if(value.ai_status) body.append(node('p','field-help',value.generation_mode==='LOCAL_FALLBACK'?'Text interpretation unavailable; the exact local question was used.':'Optional text interpretation selected the topic. The cited evidence and certainty come from the local record rules.'));
+  if(value.ai_status) body.append(node('p','field-help',value.generation_mode==='LOCAL_FALLBACK'?'Text interpretation unavailable; the exact local question was used.':`Optional text interpretation selected ${human(value.interpreted_topic)}. The cited evidence and certainty come from the local record rules.`));
   for(const warning of value.warnings || []) body.append(node('p','field-help',warning));
   for(const citation of value.source_citations || []) {
     const fact=value.facts.find(item=>item.event_id===citation.event_id),row=node('div','record-entry');
@@ -272,7 +272,7 @@ function showPending() {
 }
 function errorMessage(error) {
   return ({UNSUPPORTED_QUESTION:'Choose one of the six supported questions. Other wording is not supported by the current local rules.',
-    ASR_MODE_UNAVAILABLE:'Simulated scribe is unavailable. Manual notes remain available.',AI_UNAVAILABLE:'Optional text assistance is unavailable. Manual notes and exact supported questions remain available.',AI_CONTEXT_CHANGED:'The source note changed. Save the current draft before requesting another proposal.',AI_BUDGET_EXHAUSTED:'The configured text-assistance limit has been reached. Manual care remains available.',REVIEW_VALIDATION_FAILED:'Complete the clinical statements and their source details, save the draft, then review again.',
+    ASR_MODE_UNAVAILABLE:'Simulated scribe is unavailable. Manual notes remain available.',AI_UNAVAILABLE:'Optional text assistance is unavailable. Manual notes and exact supported questions remain available.',AI_CONTEXT_CHANGED:'The source note changed. Save the current draft before requesting another proposal.',AI_BUDGET_EXHAUSTED:'The configured text-assistance limit has been reached. Manual care remains available.',AI_OUTCOME_UNKNOWN:'The earlier text attempt cannot be safely repeated. Use manual notes or an exact local question.',AI_PROVIDER_UNAVAILABLE:'Text assistance did not complete. No automatic provider retry was made. Manual notes and exact local questions remain available.',AI_OUTPUT_INVALID:'The text proposal could not be validated. The saved note is unchanged.',REVIEW_VALIDATION_FAILED:'Complete the clinical statements and their source details, save the draft, then review again.',
     DRAFT_VERSION_CONFLICT:'This draft changed on the server. Load the current draft before choosing another save.',STATE_VERSION_CONFLICT:'The source changed. Refresh the history and current draft before continuing.',
     SUMMARY_NOT_COMMITTED:'No reviewed record has been committed for this encounter.',SUMMARY_OUTDATED:'A source statement was corrected or retracted. The earlier summary is no longer available.',
     CLINICAL_INTEGRITY_INVALID:'The clinical source could not be verified. No protected result is being shown.',HISTORY_LOCKED:'History is not shared for this action.',GRANT_ENDED:'History sharing ended. Previously displayed history has been cleared.',
@@ -609,6 +609,10 @@ function showBrief(proposal) {
     if(section.text) proposed.push(`${title}:\n${section.text}`);
     for(const quote of section.note_quotes ?? []) region.append(node('p','field-help',`Source quote: ${quote}`));
   }
+  if(!proposed.length) {
+    region.append(node('p','field-help','No note text was proposed. Your saved note is unchanged.'));
+    dialogs.source.open(get('more-tools').querySelector('summary'));return;
+  }
   const apply=textButton('Use proposal as visit note',()=>{
     if(epoch!==generation || rev!==revision || dirty || draft?.version!==version || !ready || committed || pending.write) {notice('save-feedback','Proposal not applied','The note changed. Review the current saved draft before applying a proposal.');return;}
     const text=proposed.join('\n\n');if(text.length+get('assessment').value.length+40>8000) {notice('save-feedback','Proposal too long','Edit the proposal manually to fit the note limit.');return;}
@@ -618,7 +622,7 @@ function showBrief(proposal) {
 const briefControl=node('button','menu-action','Consultation brief proposal');briefControl.type='button';briefControl.id='consultation-brief';briefControl.dataset.command='';
 briefControl.addEventListener('click',async()=>{
   get('more-tools').open=false;if(!ready || committed || pending.write) return;
-  if(!dirty && draft?.ai_proposal && !draft.ai_proposal.include_history) {showBrief(draft.ai_proposal);return;}
+  if(!dirty && draft?.ai_proposal && !draft.ai_proposal.include_history && draft.version===draft.ai_proposal.source_version+1) {showBrief(draft.ai_proposal);return;}
   const epoch=generation;if(!(await saveDraft()) || epoch!==generation || !draft || dirty) return;
   const rev=revision,result=await command('brief','/ai/consultation/brief',{draft_id:draft.draft_id,expected_draft_version:draft.version,include_history:false},'Prepare consultation brief');
   if(result && epoch===generation && rev===revision && !dirty && draft?.ai_proposal) showBrief(draft.ai_proposal);

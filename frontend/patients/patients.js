@@ -101,10 +101,10 @@ function moreActions(patient,current) {
 }
 function renderPatient(patient,current=false) {
   const row=node('tr',current?'ledger-current':'');row.setAttribute('role','row');
-  const values=[current?'Current':patient.waiting_position,patient.public_token,patient.display_name];
+  const values=[current?0:patient.waiting_position,patient.public_token,patient.display_name];
   for(let index=0;index<3;index+=1) {
     const cell=node('td',index===1?'token':index===2?'patient-name':'numeric',values[index]);
-    if(current && index===0) cell.replaceChildren(node('span','state-label','Current'));
+    if(current && index===0) cell.setAttribute('aria-label','Current patient, position 0');
     cell.setAttribute('role','cell');cell.dataset.label=['Position','Token','Patient'][index];row.append(cell);
   }
   const status=node('td','status-cell'),actions=node('td','actions-cell'),controls=node('div','row-actions');
@@ -141,7 +141,7 @@ function renderQueue(value) {
   const service=get('service-state');service.replaceChildren();
   service.className=`status ${value.service_state==='ACTIVE'?'service-active':'service-paused'}`;
   service.append(node('span','status-dot'),node('span','',value.service_state==='ACTIVE'?'Active':'On break'));
-  if(value.service_state!=='ACTIVE' && value.delay_message) get('service-state').append(node('span','muted',value.delay_message));
+  if(value.service_state!=='ACTIVE' && value.delay_message) get('service-state').append(node('span','muted service-delay',value.delay_message));
   const contact=Date.parse(value.server_time);
   const contacted=new Date(contact);
   setText(get('last-contact'),Number.isFinite(contact)?`Updated at ${contacted.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'})}, ${contacted.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`:'Server contacted');

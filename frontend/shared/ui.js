@@ -189,6 +189,7 @@ export function mountHeader(target,{area='provider',page='patients',accountLabel
   else {action('Language: English','globe',language);action('Help','help',help);menu.append(element('hr','menu-divider'));}
   if(onSignOut) {
     if(area==='patient') menu.append(element('p','field-help account-note','Signing out does not stop sharing. Use Stop sharing on your visit.'));
+    else if(roleLabel==='Clinician') menu.append(element('p','field-help account-note','Signing out cancels this clinician session’s pending sharing requests and ends its shared access.'));
     const signOut=element('button','menu-action','Sign out');signOut.type='button';signOut.prepend(icon('signOut'));
     signOut.addEventListener('click',()=>{disclosure.close();onSignOut();});menu.append(signOut);
   } else {const signIn=element('a','menu-action','Sign in');signIn.href='../login/';signIn.prepend(icon('person'));menu.append(signIn);}
@@ -207,9 +208,12 @@ const hindiUI={
   'Choose the interface language. Clinical records keep their original wording.':'इंटरफ़ेस की भाषा चुनें। चिकित्सा रिकॉर्ड अपने मूल शब्दों में रहेंगे।',
   'Ask a member of hospital staff if you need help using this page.':'इस पेज का उपयोग करने में सहायता के लिए अस्पताल के कर्मचारी से पूछें।','For urgent care, speak to qualified staff now.':'तत्काल देखभाल के लिए अभी योग्य कर्मचारी से बात करें।',
   'Signing out does not stop sharing. Use Stop sharing on your visit.':'साइन आउट करने से रिकॉर्ड साझा करना बंद नहीं होता। अपनी मुलाक़ात में साझा करना बंद करें चुनें।',
+  'Signing out cancels this clinician session’s pending sharing requests and ends its shared access.':'साइन आउट करने से इस चिकित्सक सत्र के लंबित साझाकरण अनुरोध रद्द हो जाते हैं और इसकी साझा पहुँच समाप्त हो जाती है।',
+  'The request lasts up to five minutes and ends if you sign out. The patient can respond on their device, or permitted staff can assist. New care can continue.':'अनुरोध अधिकतम पाँच मिनट तक रहता है और आपके साइन आउट करने पर समाप्त हो जाता है। मरीज़ अपने उपकरण पर उत्तर दे सकता है या अनुमति प्राप्त कर्मचारी सहायता कर सकते हैं। नई देखभाल जारी रह सकती है।',
   'Skip to content':'मुख्य सामग्री पर जाएँ','Username':'यूज़रनेम','Password':'पासवर्ड','Show':'दिखाएँ','Hide':'छिपाएँ','Checking your session…':'आपका सत्र जाँचा जा रहा है…','Signing in…':'साइन इन हो रहा है…',
   'Room staff':'कक्ष कर्मचारी','Clinician':'चिकित्सक','Room':'कक्ष','Active':'सक्रिय','On break':'विराम पर','Pause queue':'कतार रोकें','Resume queue':'कतार फिर चालू करें','Register patient':'मरीज़ का पंजीकरण',
   'Position':'स्थान','Token':'टोकन','Patient':'मरीज़','Status':'स्थिति','Actions':'कार्रवाइयाँ','Current':'वर्तमान','Returned':'वापस आए','Transferred':'स्थानांतरित','More actions':'अन्य कार्रवाइयाँ',
+  'Current patient, position 0':'वर्तमान मरीज़, स्थान 0',
   'Awaiting arrival':'आने की प्रतीक्षा','In consultation':'परामर्श जारी','Confirm arrival':'आगमन की पुष्टि','Call again':'फिर बुलाएँ','Mark absent':'अनुपस्थित दर्ज करें','Open encounter':'परामर्श खोलें',
   'Complete visit':'मुलाक़ात पूरी करें','Withdraw visit':'मुलाक़ात हटाएँ','Confirm return':'वापसी की पुष्टि','Confirm patient return':'मरीज़ की वापसी की पुष्टि','Call next patient':'अगले मरीज़ को बुलाएँ',
   'Print token':'टोकन प्रिंट करें','Preparing token…':'टोकन तैयार हो रहा है…','Loading sample guidance for the printed slip.':'पर्ची के लिए नमूना मार्गदर्शन लोड हो रहा है।','Sample step-free directions from entrance':'प्रवेश से बिना सीढ़ियों का नमूना मार्ग',

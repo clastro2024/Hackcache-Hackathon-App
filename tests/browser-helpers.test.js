@@ -54,6 +54,17 @@ test('S05/A11 browser helper scope: transport loss clears clinical context while
   assert.throws(()=>api.createIntent('/auth/logout',{}),{code:'PENDING_INTENT_LIMIT'});api.clear();assert.equal(api.pendingCount,0);
 });
 
+test('AI browser reconciliation: an in-progress reservation retains its original intent without automatic retry',async()=>{
+  const calls=[];let complete=false;
+  const api=createApiClient({fetcher:async(url,options)=>{calls.push({url,key:options.headers['X-Idempotency-Key'],body:options.body});
+    return complete?reply({ai_status:'COMPLETED',replayed:true}):reply({error:'AI_REQUEST_IN_PROGRESS',retry_strategy:'NONE',commit_state:'NOT_APPLIED'},409);}});
+  const intent=api.createIntent('/ai/records/ask',{encounter_id:'encounter_demo_ledger',question:'Penicillin allergy history?'});
+  await assert.rejects(()=>api.command(intent),{code:'AI_REQUEST_IN_PROGRESS',commit_state:'UNKNOWN'});
+  assert.equal(calls.length,1);assert.equal(api.pendingCount,1);
+  complete=true;assert.equal((await api.command(intent)).replayed,true);
+  assert.equal(calls.length,2);assert.deepEqual(calls[1],calls[0]);assert.equal(api.pendingCount,0);
+});
+
 test('S02 browser session helper scope: absolute expiry clears page memory and credentials are discarded after failed login',async()=>{
   let scheduled,cancelled=0;
   const api=createApiClient({fetcher:async()=>reply({authenticated:true,actor:{account_id:'staff_demo'},csrf_token:'fictional',expires_at:new Date(10000).toISOString()})});

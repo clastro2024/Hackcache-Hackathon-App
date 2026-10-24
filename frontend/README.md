@@ -70,7 +70,7 @@ Use named semantic colors with text/icons; no color-only evidence or success sta
 
 ## Current boundary
 
-Shared setup, login, the Patients ledger and Clinical Encounter are implemented. The login utility
+Shared setup, login, the Patients ledger, Clinical Encounter and Patient Visit are implemented. The login utility
 recovers the current session, validates credentials locally before submission,
 clears the password after each attempt and routes by the server-returned role.
 Uncertain sign-in requires password re-entry through the existing helper.
@@ -440,6 +440,9 @@ A separate browser download check saved and parsed both JSON files in an isolate
   changes only the unsaved visit note. Save, exact review and commit remain separate;
   generated clinical items are never added automatically. No browser provider key,
   SDK, automatic provider request or new backend endpoint was added.
+  Empty proposals offer no Apply action. A saved proposal is reused only at the
+  version immediately following its source; later saved edits require a fresh
+  explicit request rather than silently reusing older generated text.
 
 The existing preview patient-a had no active grant, pending request or committed
 summary when diagnosed. That state is truthful. To see the populated design, an
@@ -464,6 +467,17 @@ desktop and mobile sizes; layout checks covered 1440/853/390/320px. Chrome's act
 font report confirmed custom IBM Plex Sans regular and semibold faces. Printing
 was intercepted for content/CSS checks; physical/OS print behavior was not verified.
 
+A separate successful-proposal browser check passed seven assertions using three
+local stub responses and zero live provider calls: no automatic request; notes-only
+context and visible source quote; unchanged original note before Apply; reopening
+the same saved proposal without regeneration; later saved edits requiring a fresh
+proposal; empty output preserving the note with no Apply; and deliberate Apply,
+Save, Review and Commit preserving the one clinician-supplied test item without
+generated additions. The server's existing structured-item review requirement was
+preserved. Initial temporary harness failures from draft-envelope/version handling,
+case-sensitive labels and an item-free review assumption were corrected; those
+failed attempts are not reported as passes.
+
 These browser checks use disposable fictional databases/profiles. Kaspersky injected
 its resource host into the local browser, so they do not establish complete resource
 isolation. They also do not establish accessibility conformance, translation quality,
@@ -477,3 +491,57 @@ API. The frontend does not invent those results. Hosted cookie/TLS behavior and
 representative accessibility/comprehension review require separate verification.
 Backend code, dependencies, private AI configuration and working clinical contents
 were preserved throughout this frontend work.
+
+## Testing clinician and patient together — 25 October 2026
+
+Keep the requesting clinician signed in. Open the patient account on another
+device, another browser/profile, or a private window separate from the clinician's
+normal window. Two normal tabs share the session cookie. Signing out or replacing
+the requesting clinician's session cancels its pending requests and ends its grants;
+pending requests also expire after at most five minutes. This behavior is intentional
+and is not bypassed for demo account switching. Permitted independent staff can
+record the patient's actual choice through the assisted workflow instead.
+
+Read-only diagnosis of the two reported preview requests found both successfully
+created and then CANCELLED with end_reason LOGOUT, approximately 75 and 10 seconds
+after creation. No consent or clinical data was changed during diagnosis. F06 now
+explains this lifetime in its pending-request notice. The clinician account menu
+also explains the effect before Sign out; both notices have Hindi labels. No new
+confirmation step or backend change was added.
+
+## Staff queue refinement — 25 October 2026
+
+This section supersedes the earlier Current-chip presentation. patients.js now
+renders a bold petrol 0 with an accessible current-patient label; it does not
+change the server's waiting positions. The pause helper has a dedicated service-delay
+class. shared/ui.js includes the Hindi equivalent of the current-position label.
+
+patients.css gives the wide toolbar five defined columns, a wider room selector
+with centered contents/visible picker arrow, a larger Patients heading and tighter
+spacing. The paused explanation sits below On break. Smaller screens use deliberate
+rows; narrow action groups wrap as whole buttons rather than splitting their labels.
+Queue values are slightly smaller while the current patient's name/token retain
+their hierarchy. The current status's main line centers with the other values and
+its explanation sits underneath. Removing the extra border spacer after the current
+row gives the first waiting row the same alignment as subsequent waiting rows.
+
+The table and expanded absent list share column widths. Absent tokens and patient
+names align with their corresponding table columns, use smaller type, and their
+Confirm return/More actions controls form a compact, vertically centered group at
+the right. Mobile absent rows reflow explicitly. Native selector behavior, More
+actions, confirmation dialogs and existing permission/command handlers are retained.
+
+Validation: environment/native checks, public build, JavaScript syntax and whitespace
+checks passed. npm test: 169 total, 164 passed, five TODOs, zero failures/skips/
+cancellations (43,101.6626 ms). A disposable real-HTTP/Chrome check passed three
+grouped scenarios across 1486/1388/1280/1100/1024/853/768/390/320px: no horizontal
+overflow; one centered paused toolbar row at the three wide sizes; selector width
+and picker open/Escape; primary/status/subtext and waiting-row alignment; matched
+absent columns/action centers and reduced type; plus actual pause/resume, confirmed
+return, repeat call and arrival. Desktop/mobile screenshots were inspected in two
+bounded rounds. The running preview returned HTTP 200 for readiness and the updated
+queue CSS/JS. No working patient data or backend source was modified.
+
+The browser's previously documented Kaspersky resource injection remains; these
+checks do not claim complete resource isolation, hosted qualification or accessibility
+conformance. Existing acceptance TODOs and API-dependent remaining scope are unchanged.
