@@ -1,119 +1,35 @@
-# Operational and collaboration guide
+# Contributing
 
-## 1. Which repository owns what
+Use Node.js 24 LTS and the README setup. Run commands from this independent app repository. Public setup must not require planning files from a surrounding repository.
 
-This repository owns the app: backend, future frontend/runtime assets, tests, dependency files and app-facing documentation. Use its GitHub issues and pull requests for app changes.
-
-The larger planning workspace is separate. When this clone lives inside its `App` folder, the parent ignores that entire folder; app changes must be committed and pushed from this repository. A parent-repository commit or push does not back up app work. A fresh parent clone does not contain the app until it is cloned separately.
-
-You can also clone this app anywhere and work without the planning workspace. There is no subtree/submodule workflow and no shared commit history to synchronize.
-
-## 2. First setup
-
-Install Git and Python 3.12, then use the README clone/environment/install commands. Use a virtual environment per clone; do not commit or copy `.venv` between machines. No environment file or external API key is currently required. Real-provider credentials must never be added to fixtures or committed later.
-
-Set your own Git author identity if needed:
+## Checks and scope
 
 ```powershell
-git config user.name "Your Name"
-git config user.email "YOUR_GITHUB_NOREPLY_EMAIL"
-git remote -v
-git status --short --branch
+npm ci
+npm run check:environment
+npm run build
+npm test
 ```
 
-Use your own GitHub account and credential manager/SSH credentials. The repository owner grants write access through GitHub Settings → Collaborators or the organization/team equivalent. Public read access does not itself grant push access. Do not share passwords or tokens.
+Tests exercise actual private files, transactions, an owned child process, local HTTP listeners and browser request/session helpers. Coordinator races use constructor hooks outside transactions; no HTTP test-control routes exist. Consent/grant rows used by auth tests are explicitly inserted fictional fixtures, not evidence of consent endpoints. Test names identify the exercised portion of Q/S/D/A/C/ASR/F/R; passing a portion does not complete an acceptance gate. Node cookie adapters do not verify browser cookie enforcement. Remaining domain suites stay TODO. Tests and CI never make live Sarvam calls; resource measurement remains separate.
 
-## 3. Everyday app work
+tests/fixtures/v1-vectors.json contains six fixed byte/hash references generated with Python 3.14 during development and checked by JavaScript tests, including the published 1,090-byte vector. Python is not an install, CI or application dependency. The v1 encoder preserves sorted Unicode keys, UTF-8 compact JSON, integer sequence and Python float representation for nullable capture.confidence. Do not substitute plain JSON.stringify or silently rewrite stored bytes/hashes. Initialization binds fresh recording times; restore retains the already committed canonical text.
 
-Run these inside the app repository. Keep your working tree clean or deliberately commit/stash your work before switching branches.
+One package.json and package-lock.json own all dependencies. Preserve exact compatible pins; use npm ci for reproduction. When intentionally upgrading, review actual package API/native/platform changes and lockfile integrity, recheck native bindings and build, and record results. .npmrc currently disables install scripts because pinned native packages include prebuilds; do not claim an untested platform works or silently add global compiler prerequisites.
 
-```powershell
-git switch main
-git pull --ff-only origin main
-git switch -c codex/describe-the-change
-```
+## Repository and data boundaries
 
-Implement one focused change and run the affected checks:
+App source, fixtures, documentation, tests and CI belong here. Inspect `git status` before changes; preserve other contributors' work. Use task branches when instructed, stage exact files, and inspect the staged diff. Do not force-add this repository to a parent, reinitialize Git, discard history or commit/push/publish without authorization.
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest tests/ -q
-.\.venv\Scripts\python.exe -m pip check
-git diff
-git status --short
-git add -- backend tests
-git diff --cached
-git commit -m "Describe the resulting behavior"
-git push -u origin codex/describe-the-change
-```
+Keep .env, .tools, node_modules, runtime databases/WAL/SHM, backups, reports, test data, dist and generated CSS private or ignored as appropriate. Fictional fixture inputs contain no passwords, keys, active sessions or real records. Do not print protected content or environment dumps in debugging output.
 
-Replace the staged paths with the exact files you changed, including documentation/dependencies where relevant. Stage deliberately and inspect the cached diff; do not add local data, keys, logs or environments. Use a unique branch per task/person.
+## Implementation order
 
-Open a pull request into `main`, describe behavior and real validation, wait for checks and ask a teammate to review. After merge:
+1. Completed storage foundation: thirteen tables, synchronous units, safe audit/receipts, real fictional fixtures, v1 canonical vectors and explicit maintenance. Broader application acceptance remains pending.
+2. Completed server/auth foundation: existing-file startup, current readiness, bounded shutdown, fixed-account login/session/logout, Origin/CSRF, permission and command/release coordinators, memory-only browser helpers. Hosted/browser and domain-route acceptance remain pending.
+3. Next: intake/queue/navigation, encounter binding and consent.
+4. Capture/save/edit/review/commit, cited evidence and optional local checks.
+5. Bounded optional text AI and source-checked reviewed summary/local FHIR output.
+6. Real integration/recovery/browser/packaging checks, then scoped resource measurement.
 
-```powershell
-git switch main
-git pull --ff-only origin main
-git branch -d codex/describe-the-change
-```
-
-GitHub Settings → Rules/Branches can protect `main` and require reviews/CI if the repository's permissions and plan allow it. No server-side protection rule is established merely by this guide.
-
-## 4. Bring main into an active branch
-
-First commit or deliberately stash your current work, then:
-
-```powershell
-git fetch origin
-git merge origin/main
-```
-
-Resolve each conflict in its actual context. Remove conflict markers, stage only resolved files, rerun checks and commit the merge when needed. `git merge --abort` abandons the merge while it is in progress. Avoid force-pushing shared branches. A `--ff-only` pull stopping is useful evidence of divergence; inspect the graph and merge instead of discarding either person's work.
-
-Two people should coordinate ownership of the same service/schema to limit conflicts. App changes have one authoritative remote: this repository.
-
-## 5. Run, stop and reset the current prototype
-
-```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
-```
-
-Open `http://127.0.0.1:8000/docs`. Stop with Ctrl+C. The current services seed fictional state in memory; restarting the process recreates that baseline and loses runtime changes. This is not durable database recovery. Use one process/worker for this snapshot.
-
-For development, `--reload` restarts the process on changes and therefore resets this in-memory state. If port 8000 is occupied, choose `--port 8001` and use that address; do not terminate unrelated processes.
-
-The project does not yet contain the planned frontend, database maintenance CLI or real ASR adapter. Do not invent seed/reset/deploy commands for those targets. Bind locally; current authentication/disclosure gaps are described in SECURITY.md and docs/STATUS.md.
-
-On macOS/Linux use `.venv/bin/python` in place of the Windows interpreter path.
-
-## 6. Dependency maintenance
-
-`requirements.txt` declares runtime packages; `requirements-dev.txt` adds test tools. Both resolve against `constraints.txt`, which records the versions used during setup. Update a dependency intentionally, refresh compatible pins in an isolated environment, run `pip check` and the tests, and review the dependency diff together.
-
-Install with:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-```
-
-CI uses pinned GitHub Action revisions and Python 3.12 on Windows/Linux. Review action/dependency upgrades as code changes. A missing or queued check is not a passing check. The current small suite is service-level coverage, not the revised architecture's security/clinical acceptance suite.
-
-## 7. Push and access troubleshooting
-
-- **LF/CRLF warning:** text line endings are governed by `.gitattributes`; this warning is distinct from a failed upload. Avoid mass renormalization during unrelated work.
-- **Non-fast-forward:** fetch and merge remote changes, then push. Preserve both contributors' work.
-- **HTTP 408/disconnect:** do not infer success from “Everything up-to-date” after fatal errors. Compare the remote branch with the local commit:
-  ```powershell
-  git rev-parse main
-  git ls-remote origin refs/heads/main
-  ```
-  If repeated, try a different network or properly configured SSH. Do not rewrite history to fix a transport failure.
-- **Authentication/403:** check `git remote -v`, the signed-in GitHub account and repository write access. Authenticate through your credential manager or SSH; never paste a token into a remote URL, issue, log or chat.
-- **Ignored source file:** inspect `git check-ignore -v -- path/to/file` before changing ignore rules. The parent intentionally ignores this entire app clone.
-
-## 8. Recovery and handoff
-
-A local commit is not a remote backup until its push is confirmed. Before handing off, push the branch, share the pull request and state tests, remaining gaps and any required migration. A teammate should be able to clone/install/test using this repository alone.
-
-Use new commits to reverse published changes (`git revert`), rather than erasing shared history. Review any local discard carefully: it can remove uncommitted work. No force-push, reset or recursive deletion is part of the ordinary workflow.
-
-The owner should choose a project license and confirm collaborator access before broader reuse. Neither license selection nor collaborator permissions are implied by the presence of this document.
+Keep one backend/database authority, no asynchronous work in transactions, no successful placeholder endpoints and no clinical commit from extraction alone. Reconcile uncertain operations using the original key and intent. Record implemented behavior separately from proposed controls after each stage.

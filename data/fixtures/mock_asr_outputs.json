@@ -1,0 +1,101 @@
+{
+  "fixture_schema_version": "mock-asr-fixtures-v1",
+  "extractor_version": "mock-fixtures-v1",
+  "fixtures": [
+    {
+      "fixture_id": "hindi_clip_1_dyspepsia",
+      "language": "hi",
+      "script": "Latn",
+      "text": "Yeh kalpanik OPD note hai. Doctor ka provisional assessment dyspepsia hai. Dawa ki details record nahin hain.",
+      "item_templates": [
+        {
+          "event_type": "CONDITION_RECORDED",
+          "change_kind": "INITIAL",
+          "source_kind": "CLINICIAN_ASSESSMENT",
+          "quote": "Doctor ka provisional assessment dyspepsia hai.",
+          "payload": {
+            "concept": {
+              "text": "Dyspepsia",
+              "term_key": "dyspepsia_demo",
+              "coding": null
+            },
+            "clinical_status": "ACTIVE",
+            "verification_status": "UNCONFIRMED"
+          }
+        }
+      ],
+      "warning_codes": [
+        "SIMULATED_INPUT",
+        "MEDICATION_DETAILS_NOT_RECORDED"
+      ]
+    },
+    {
+      "fixture_id": "hindi_clip_2_bp_sugar",
+      "language": "hi",
+      "script": "Latn",
+      "text": "Mujhe BP ki dawa ka naam yaad nahin. Sugar papa ko hai. Penicillin allergy ke bare mein maloom nahin.",
+      "item_templates": [],
+      "warning_codes": [
+        "SIMULATED_INPUT",
+        "UNRESOLVED_MEDICATION_NAME",
+        "FAMILY_HISTORY_ONLY",
+        "ALLERGY_STATUS_UNKNOWN"
+      ]
+    },
+    {
+      "fixture_id": "hindi_clip_3_scribe",
+      "language": "hi",
+      "script": "Latn",
+      "text": "Doctor ne metformin ki dose badalne aur Ecosprin band karne ko kaha. Nayi dose aur wajah confirm karni hai. Saat din baad follow-up.",
+      "item_templates": [
+        {
+          "event_type": "MEDICATION_RECORDED",
+          "change_kind": "CLINICAL_UPDATE",
+          "source_kind": "CLINICIAN_ASSESSMENT",
+          "quote": "Doctor ne metformin ki dose badalne aur Ecosprin band karne ko kaha.",
+          "payload": {
+            "concept": {
+              "text": "Metformin",
+              "term_key": "metformin_demo",
+              "coding": null
+            },
+            "statement_kind": "PRESCRIBED",
+            "status": "ACTIVE",
+            "dose_text": null,
+            "route_text": null,
+            "frequency_text": null,
+            "duration_text": null,
+            "reason": null
+          }
+        },
+        {
+          "event_type": "MEDICATION_RECORDED",
+          "change_kind": "CLINICAL_UPDATE",
+          "source_kind": "CLINICIAN_ASSESSMENT",
+          "quote": "Doctor ne metformin ki dose badalne aur Ecosprin band karne ko kaha.",
+          "payload": {
+            "concept": {
+              "text": "Ecosprin",
+              "term_key": "ecosprin_demo",
+              "coding": null
+            },
+            "statement_kind": "PRESCRIBED",
+            "status": "DISCONTINUED",
+            "dose_text": null,
+            "route_text": null,
+            "frequency_text": null,
+            "duration_text": null,
+            "reason": null
+          }
+        }
+      ],
+      "warning_codes": [
+        "SIMULATED_INPUT",
+        "UPDATE_TARGET_REQUIRED",
+        "MEDICATION_DETAILS_MISSING",
+        "STOP_REASON_MISSING",
+        "FOLLOW_UP_SOURCE_ONLY"
+      ]
+    }
+  ]
+}

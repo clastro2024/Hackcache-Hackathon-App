@@ -1,0 +1,365 @@
+{
+  "fixture_schema_version": "opd-seed-v1",
+  "seed_label": "opd-demo-v1",
+  "simulation_label": "FICTIONAL_REHEARSAL_CHECKPOINT",
+  "facility_id": "facility_demo",
+  "map_version": "opd-map-v1",
+  "next_token_number": 5,
+  "patients": [
+    {
+      "patient_id": "patient_demo_ledger",
+      "display_name": "Fictional Patient A",
+      "date_of_birth": null,
+      "language": "hi",
+      "demo_identifier": null
+    },
+    {
+      "patient_id": "patient_demo_negative",
+      "display_name": "Fictional Patient B",
+      "date_of_birth": null,
+      "language": "en",
+      "demo_identifier": null
+    },
+    {
+      "patient_id": "patient_demo_waiting",
+      "display_name": "Fictional Patient C",
+      "date_of_birth": null,
+      "language": "hi",
+      "demo_identifier": null
+    },
+    {
+      "patient_id": "patient_demo_absent",
+      "display_name": "Fictional Patient D",
+      "date_of_birth": null,
+      "language": "en",
+      "demo_identifier": null
+    }
+  ],
+  "accounts": [
+    {
+      "account_id": "staff_demo",
+      "username": "staff",
+      "role": "STAFF",
+      "patient_id": null,
+      "room_ids": [
+        "room_12",
+        "room_18"
+      ],
+      "permissions": [
+        "intake:register",
+        "queue:operate",
+        "consent:assist"
+      ],
+      "registration_id": null
+    },
+    {
+      "account_id": "clinician_12",
+      "username": "doctor12",
+      "role": "CLINICIAN",
+      "patient_id": null,
+      "room_ids": [
+        "room_12"
+      ],
+      "permissions": [
+        "queue:operate",
+        "clinical:write",
+        "emergency:read"
+      ],
+      "registration_id": "MOCK-NMC-12"
+    },
+    {
+      "account_id": "clinician_18",
+      "username": "doctor18",
+      "role": "CLINICIAN",
+      "patient_id": null,
+      "room_ids": [
+        "room_18"
+      ],
+      "permissions": [
+        "queue:operate",
+        "clinical:write",
+        "emergency:read"
+      ],
+      "registration_id": "MOCK-NMC-18"
+    },
+    {
+      "account_id": "account_patient_1",
+      "username": "patient-a",
+      "role": "PATIENT",
+      "patient_id": "patient_demo_ledger",
+      "room_ids": [],
+      "permissions": [
+        "patient:self",
+        "consent:decide"
+      ],
+      "registration_id": null
+    },
+    {
+      "account_id": "account_patient_2",
+      "username": "patient-b",
+      "role": "PATIENT",
+      "patient_id": "patient_demo_negative",
+      "room_ids": [],
+      "permissions": [
+        "patient:self",
+        "consent:decide"
+      ],
+      "registration_id": null
+    },
+    {
+      "account_id": "account_patient_3",
+      "username": "patient-c",
+      "role": "PATIENT",
+      "patient_id": "patient_demo_waiting",
+      "room_ids": [],
+      "permissions": [
+        "patient:self",
+        "consent:decide"
+      ],
+      "registration_id": null
+    },
+    {
+      "account_id": "account_patient_4",
+      "username": "patient-d",
+      "role": "PATIENT",
+      "patient_id": "patient_demo_absent",
+      "room_ids": [],
+      "permissions": [
+        "patient:self",
+        "consent:decide"
+      ],
+      "registration_id": null
+    }
+  ],
+  "rooms": [
+    {
+      "room_id": "room_12",
+      "label": "Room 12",
+      "floor": "GROUND",
+      "map_node": "room_12",
+      "clinician_id": "clinician_12"
+    },
+    {
+      "room_id": "room_18",
+      "label": "Room 18",
+      "floor": "FIRST",
+      "map_node": "room_18",
+      "clinician_id": "clinician_18"
+    }
+  ],
+  "visits": [
+    {
+      "visit_id": "visit_demo_1",
+      "patient_id": "patient_demo_ledger",
+      "token_id": "token_demo_1",
+      "public_token": "OPD-001",
+      "room_id": "room_12",
+      "queue_state": "IN_CONSULTATION",
+      "queue_rank": null
+    },
+    {
+      "visit_id": "visit_demo_2",
+      "patient_id": "patient_demo_negative",
+      "token_id": "token_demo_2",
+      "public_token": "OPD-002",
+      "room_id": "room_18",
+      "queue_state": "IN_CONSULTATION",
+      "queue_rank": null
+    },
+    {
+      "visit_id": "visit_demo_3",
+      "patient_id": "patient_demo_waiting",
+      "token_id": "token_demo_3",
+      "public_token": "OPD-003",
+      "room_id": "room_12",
+      "queue_state": "WAITING",
+      "queue_rank": 1
+    },
+    {
+      "visit_id": "visit_demo_4",
+      "patient_id": "patient_demo_absent",
+      "token_id": "token_demo_4",
+      "public_token": "OPD-004",
+      "room_id": "room_12",
+      "queue_state": "SKIPPED_ABSENT",
+      "queue_rank": null
+    }
+  ],
+  "encounters": [
+    {
+      "encounter_id": "encounter_demo_ledger",
+      "visit_id": "visit_demo_1",
+      "patient_id": "patient_demo_ledger",
+      "room_id": "room_12",
+      "clinician_id": "clinician_12",
+      "call_attempts": 1,
+      "checked_in_by": "staff_demo",
+      "absent": false
+    },
+    {
+      "encounter_id": "encounter_demo_negative",
+      "visit_id": "visit_demo_2",
+      "patient_id": "patient_demo_negative",
+      "room_id": "room_18",
+      "clinician_id": "clinician_18",
+      "call_attempts": 1,
+      "checked_in_by": "staff_demo",
+      "absent": false
+    },
+    {
+      "encounter_id": "encounter_demo_absent",
+      "visit_id": "visit_demo_4",
+      "patient_id": "patient_demo_absent",
+      "room_id": "room_12",
+      "clinician_id": "clinician_12",
+      "call_attempts": 3,
+      "checked_in_by": null,
+      "absent": true
+    }
+  ],
+  "clinical_events": [
+    {
+      "ledger_format": "v1",
+      "event_id": "evt_demo_stop",
+      "patient_id": "patient_demo_ledger",
+      "encounter_id": null,
+      "sequence": 1,
+      "facility_id": "facility_demo",
+      "event_type": "MEDICATION_RECORDED",
+      "entity_id": "entity_demo_ecosprin",
+      "supersedes_event_id": null,
+      "change_kind": "INITIAL",
+      "change_reason": null,
+      "occurred_on": "2026-02-02",
+      "occurrence_text": null,
+      "source": {
+        "kind": "DOCUMENT_REFERENCE",
+        "reference": "fixture_stop_note",
+        "authored_on": "2026-02-02",
+        "original_author": "Fictional source clinician",
+        "quote": "Ecosprin discontinued in this synthetic note."
+      },
+      "payload": {
+        "concept": {
+          "text": "Ecosprin",
+          "term_key": "ecosprin_demo",
+          "coding": null
+        },
+        "statement_kind": "PRESCRIBED",
+        "status": "DISCONTINUED",
+        "dose_text": null,
+        "route_text": null,
+        "frequency_text": null,
+        "duration_text": null,
+        "reason": "Stop instruction recorded in fictional source"
+      },
+      "capture": {
+        "method": "FIXTURE_SEED",
+        "fixture_id": "fixture_stop_note",
+        "extractor_version": null,
+        "confidence": null
+      },
+      "recorded_by": null,
+      "recorded_at": "2026-10-23T04:30:00Z",
+      "review": {
+        "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+        "reviewed_by": null,
+        "reviewed_at": null
+      },
+      "synthetic": true
+    },
+    {
+      "ledger_format": "v1",
+      "event_id": "evt_demo_penicillin",
+      "patient_id": "patient_demo_ledger",
+      "encounter_id": null,
+      "sequence": 2,
+      "facility_id": "facility_demo",
+      "event_type": "ALLERGY_RECORDED",
+      "entity_id": "entity_demo_penicillin",
+      "supersedes_event_id": null,
+      "change_kind": "INITIAL",
+      "change_reason": null,
+      "occurred_on": "2024-03-15",
+      "occurrence_text": null,
+      "source": {
+        "kind": "DOCUMENT_REFERENCE",
+        "reference": "fixture_penicillin_note",
+        "authored_on": "2024-03-15",
+        "original_author": "Fictional source clinician",
+        "quote": "Fictional source records a penicillin allergy."
+      },
+      "payload": {
+        "concept": {
+          "text": "Penicillin",
+          "term_key": "penicillin_demo",
+          "coding": null
+        },
+        "clinical_status": "ACTIVE",
+        "verification_status": "CONFIRMED",
+        "reaction_text": null,
+        "reaction_severity": "UNKNOWN"
+      },
+      "capture": {
+        "method": "FIXTURE_SEED",
+        "fixture_id": "fixture_penicillin_note",
+        "extractor_version": null,
+        "confidence": null
+      },
+      "recorded_by": null,
+      "recorded_at": "2026-10-23T04:30:00Z",
+      "review": {
+        "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+        "reviewed_by": null,
+        "reviewed_at": null
+      },
+      "synthetic": true
+    },
+    {
+      "ledger_format": "v1",
+      "event_id": "evt_demo_latex_negative",
+      "patient_id": "patient_demo_negative",
+      "encounter_id": null,
+      "sequence": 1,
+      "facility_id": "facility_demo",
+      "event_type": "NEGATIVE_FINDING_RECORDED",
+      "entity_id": "entity_demo_latex_negative",
+      "supersedes_event_id": null,
+      "change_kind": "INITIAL",
+      "change_reason": null,
+      "occurred_on": "2026-03-15",
+      "occurrence_text": null,
+      "source": {
+        "kind": "PATIENT_REPORT",
+        "reference": "fixture_latex_assessment",
+        "authored_on": "2026-03-15",
+        "original_author": "Fictional source clinician recording patient report",
+        "quote": "No known latex reaction reported at the dated assessment"
+      },
+      "payload": {
+        "scope": {
+          "topic_key": "LATEX_ALLERGY",
+          "timeframe": "AT_ASSESSMENT"
+        },
+        "declared_by": "patient_demo_negative",
+        "declared_on": "2026-03-15",
+        "clinical_basis": "Patient report of no known latex reaction; testing not documented",
+        "scope_text": "No known latex reaction reported at the dated assessment"
+      },
+      "capture": {
+        "method": "FIXTURE_SEED",
+        "fixture_id": "fixture_latex_assessment",
+        "extractor_version": null,
+        "confidence": null
+      },
+      "recorded_by": null,
+      "recorded_at": "2026-10-23T04:00:00Z",
+      "review": {
+        "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+        "reviewed_by": null,
+        "reviewed_at": null
+      },
+      "synthetic": true
+    }
+  ]
+}

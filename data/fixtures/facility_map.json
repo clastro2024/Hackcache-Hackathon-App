@@ -1,0 +1,128 @@
+{
+  "fixture_schema_version": "facility-map-v1",
+  "map_version": "opd-map-v1",
+  "simulation_label": "FICTIONAL_SAMPLE_MAP_NOT_SURVEYED",
+  "nodes": [
+    {
+      "node_id": "entrance",
+      "label": {
+        "en": "Entrance",
+        "hi": "प्रवेश"
+      },
+      "floor": "GROUND"
+    },
+    {
+      "node_id": "registration",
+      "label": {
+        "en": "Registration desk",
+        "hi": "पंजीकरण"
+      },
+      "floor": "GROUND"
+    },
+    {
+      "node_id": "junction",
+      "label": {
+        "en": "Main junction",
+        "hi": "मुख्य मोड़"
+      },
+      "floor": "GROUND"
+    },
+    {
+      "node_id": "room_12",
+      "label": {
+        "en": "Room 12",
+        "hi": "कक्ष 12"
+      },
+      "floor": "GROUND"
+    },
+    {
+      "node_id": "lift",
+      "label": {
+        "en": "Sample lift",
+        "hi": "नमूना लिफ्ट"
+      },
+      "floor": "GROUND"
+    },
+    {
+      "node_id": "upper",
+      "label": {
+        "en": "First-floor junction",
+        "hi": "पहली मंज़िल का मोड़"
+      },
+      "floor": "FIRST"
+    },
+    {
+      "node_id": "room_18",
+      "label": {
+        "en": "Room 18",
+        "hi": "कक्ष 18"
+      },
+      "floor": "FIRST"
+    }
+  ],
+  "edges": [
+    {
+      "from": "entrance",
+      "to": "registration",
+      "step_free": true,
+      "instructions": {
+        "en": "Follow the registration sign.",
+        "hi": "पंजीकरण संकेत की ओर जाएँ।"
+      }
+    },
+    {
+      "from": "registration",
+      "to": "junction",
+      "step_free": true,
+      "instructions": {
+        "en": "Continue to the main junction.",
+        "hi": "मुख्य मोड़ तक जाएँ।"
+      }
+    },
+    {
+      "from": "junction",
+      "to": "room_12",
+      "step_free": true,
+      "instructions": {
+        "en": "Room 12 is beside the junction.",
+        "hi": "कक्ष 12 मोड़ के पास है।"
+      }
+    },
+    {
+      "from": "junction",
+      "to": "lift",
+      "step_free": true,
+      "instructions": {
+        "en": "Use the sample lift route.",
+        "hi": "नमूना लिफ्ट मार्ग लें।"
+      }
+    },
+    {
+      "from": "lift",
+      "to": "upper",
+      "step_free": true,
+      "instructions": {
+        "en": "Lift to the first floor.",
+        "hi": "लिफ्ट से पहली मंज़िल जाएँ।"
+      }
+    },
+    {
+      "from": "junction",
+      "to": "upper",
+      "step_free": false,
+      "instructions": {
+        "en": "Stairs to the first floor.",
+        "hi": "सीढ़ियों से पहली मंज़िल जाएँ।"
+      }
+    },
+    {
+      "from": "upper",
+      "to": "room_18",
+      "step_free": true,
+      "instructions": {
+        "en": "Follow the Room 18 sign.",
+        "hi": "कक्ष 18 के संकेत की ओर जाएँ।"
+      }
+    }
+  ]
+}

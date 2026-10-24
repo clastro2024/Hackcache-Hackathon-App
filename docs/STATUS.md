@@ -1,49 +1,74 @@
-# Product scope and implementation status
+# Implementation status
 
-Updated 23 October 2026. This is a concise app-facing scope summary; approved intent and implemented controls remain distinct.
+Updated 24 October 2026 (IST). Environment/storage and the server/authentication foundation are implemented. Page workflows, intake/queue/consent, clinical capture and reviewed output remain pending.
 
-## Main product
+## Files and behavior implemented
 
-VaultMed / CharakVault connects provider-led consultation with hospital OPD operations. Clinicians use relevant record context and reviewed documentation; staff manage intake and flow; patients make understandable record-sharing decisions with minimal clerical work. Clinics/hospitals are intended buyers; the core patient vault is intended to remain free.
+- backend/db.js: thirteen STRICT tables, relationship/check/unique constraints, append and terminal-draft guards, actual SQLite >=3.51.3 gate, WAL/FULL/FK settings, 50 ms busy wait, schema/integrity checks, private paths and a cooperative per-file process lease. One connection and one synchronous transaction owner; no import-time database work.
+- backend/schemas.js: strict bounded six-family event/source/review shapes and safe audit/receipt metadata. These are model/storage checks, not a complete capture/review/API implementation.
+- backend/services/audit.js: same-connection append-only audit, complete-intent fingerprints and safe receipt lookup/write. The implemented coordinator checks current authority before receipt lookup; audit helpers alone confer no authority. SQL audit failures map to a safe unavailable error and roll the unit back.
+- backend/services/vault.js: bounded duplicate-aware JSON parsing, Python-compatible typed v1 canonical encoding, full/mirrored-byte hash verification, patient sequence/entity-successor guards and fixture append. Live append refuses action until exact reviewed commit is implemented. Projection/query/certainty services are pending.
+- backend/manage.js: explicit private-password initialization, idempotent verified init, verification, SQLite backup with standalone candidate/manifest, restore to a new branch, and reset into a new file after a verified backup. Storage configuration is independent of frontend origins/assets. No overwrite, auto-migration or silent reseeding.
+- backend/app.js and server.js: explicit async factory, Node 24/existing-file/integrity/map/public-file startup gates, one Express listener, current live/ready health checks, bounded 64 KiB duplicate-aware UTF-8 JSON parsing, safe trace/dataset/error headers, exact credentialed CORS, local-script/style CSP, public-only static roots and shutdown with a 30-second drain bound. Forwarded headers are untrusted. Invalid optional ASR does not block readiness; startup needs the map, not seed.json. No provider/startup initialization work.
+- backend/auth.js, schemas.js and config.js: fixed server-resolved actors, Argon2id 19 MiB/time 2/parallelism 1, one password verification in flight, five failed attempts/minute per account/source pair and at most 1,000 limiter entries. Cookie-only 32-random-byte secrets have SHA-256 verifiers in SQLite and absolute 7,200-second sessions. Exact Origin/JSON/UUID keys and authenticated CSRF protect POST. Login/session/logout implement current credential checks, safe replay and lost-cookie orphan termination. Logout/replacement ends only that browser's clinician requests/grants; patient logout preserves the patient's sharing choice.
+- backend/operations.js: atomic business/audit/safe-receipt coordination with authorization before replay and new-action guards afterward. Protected source capture, asynchronous computation outside SQL, fresh authorization/source checks, durable access audit and final buffered release. Same-key source races reconstruct the winning receipt metadata at most once. These helpers are tested directly; clinical routes do not yet invoke them.
+- frontend/shared/api.js, session.js and ui.js: native credentialed fetch, page-memory CSRF, at most 20 bounded intents, original key/body retries (at most two additional attempts within five-second retry admission), context invalidation and late-response rejection, absolute session expiry and text-safe DOM helpers. Transport failure notifies page clearing callbacks and preserves uncertain noncredential intents. Login discards credentials after each bounded attempt, retaining only account/key reconciliation metadata for deliberate credential re-entry. Pages still need their forms/controllers and clinical clearing callbacks.
+- data/fixtures: actual credential-free seed, fictional sample map and the three named offline ASR templates. Four fictional patients, seven accounts, rooms 12/18, waiting/current/absent checkpoint state and three historical clinical sources. No initialized session or grant. Source dates remain original; new initialization binds actual recording time before hashing, with FIXTURE_NOT_CLINICALLY_VALIDATED provenance.
+- tests/helpers.js, transactions.test.js, runtime-recovery.test.js, vault.test.js and fixtures/v1-vectors.json: isolated file-backed verification, real SQLite contention, owned-child termination/reopen, maintenance CLI and canonical references. auth.test.js, operations.test.js, runtime-http.test.js and browser-helpers.test.js add actual local HTTP auth, current permissions/expiry, rollback/response-loss/race/release checks, real listener close/reopen and shared-helper integration through a Node cookie adapter. tests/setup.test.js retains setup/private-build checks.
+- README, CONTRIBUTING, SECURITY and AGENTS now describe this stage. Node 24 Windows/Linux CI is configured; no remote CI result is claimed.
 
-## Main features to deliver
+The existing frontend page shells, default private .env, package pins and parent planning/design files were preserved. No frontend redesign, provider call, commit, push or deployment was performed. The default data/runtime/vaultmed.sqlite3 remains absent: only disposable test databases were initialized, using private random test passwords. Operators can initialize their working file through the documented private CLI prompt, then run npm start; missing storage fails safely.
 
-1. **Assisted registration and tokens:** minimal visit details, optional simulated ABHA intake and one confirmed token.
-2. **Patients/worklist and queue operations:** assigned room/service context, calls, arrival/check-in, absence after three recorded calls, recall, transfer, break/resume and completion.
-3. **Hospital guidance:** staff/printed landmark directions and public-safe token/room projection; accessible routes only where the sample map supports them.
-4. **Patient-controlled sharing:** meaningful Allow / Deny / Ask Why and Stop Sharing; authenticated patient or independently permitted assistance; up to 900 seconds of scoped encounter access.
-5. **Clinical history:** source/date/status-linked records with append-only corrections that retain earlier history.
-6. **History questions:** supported questions with positive, explicitly documented negative and not-recorded distinctions. Incomplete/conflicting evidence does not acquire a certainty verdict.
-7. **Optional clinical checks:** supported advisory cross-checks without mandatory acknowledgement or automated prescribing changes; unsupported rules remain explicit.
-8. **Capture and review:** manual entry and visibly simulated offline scribe examples, editable draft, review of exact items, then final clinical save.
-9. **Reviewed output:** authorized prescription/instructions and local Composition-first FHIR R4 document export; no live ABDM integration or conformance claim.
-10. **Access accountability:** permitted access history and patient audit download; separately authenticated, reasoned and audited limited emergency access.
-11. **Accessible local operation:** readable Hindi/English design, keyboard/non-color/reduced-motion support, staff/paper alternatives and truthful recovery when the local server cannot be reached.
+## Storage and recovery semantics
 
-These are targets. The README's current-snapshot table describes the existing implementation.
+Explicit init is one schema/seed/audit transaction after password hashing outside the transaction. It refuses incomplete/unsupported files; a matching valid file returns ALREADY_INITIALIZED without changing state. Ordinary reopen preserves dataset identity, receipts, queue state and original absolute authorization deadlines.
 
-## Three core pages
+runUnit rejects nesting/async callbacks, rolls back failures and rejects returned Promises without committing; a returned-Promise violation also closes the connection. retryUnit retries only the entire confirmed-rolled-back busy/locked unit, at most three attempts within the selected five-second admission budget. Delays occur outside transactions. Unknown commit outcomes are not relabelled rollback. The owned-child test kills only its own process after confirmed commit; it is not a power-loss test.
 
-- **Patients (Doctor/Staff):** role-permitted worklist and queue actions, with registration in a sheet.
-- **Clinical Encounter:** authorized history, questions, optional checks, notes, review and saving.
-- **Patient Visit:** minimal visit reference, record-sharing request/status/control and reviewed summary; visible Language and Help.
+Backup uses better-sqlite3's backup API, checks the candidate's schema/integrity/FKs/relationships/chains, closes it in DELETE journal mode and hashes the standalone file. Its private manifest records checkpoint identity/counts/heads. Restore validates it, creates a new WAL file and ends recovered sessions, pending requests and active grants in one audited recovery transaction. It changes dataset ID without changing clinical event bytes/hashes. Rooms are paused for staff reconciliation; the CLI does not switch environment configuration. Reset preserves the old file and a verified backup, then creates a new fictional dataset. Checksums are not signatures or an independent integrity anchor.
 
-The current Patient Visit scope excludes directions, destination, queue information and waitlists. Staff, paper and public-safe guidance support hospital operations outside that page. Sign-in and recovery are utilities; record/source/access-history details are supporting disclosures. Sharing a visual frame never grants another role's permissions.
+Database/manifest outputs are limited to ignored private subdirectories, with linked paths rejected. The lease coordinates cooperating app/maintenance entrypoints; it is not an OS-wide security boundary against privileged direct SQLite access. Dead-process leases can be recovered without killing a process or deleting live sidecars. The implemented server uses the same openDatabase/verifyChains/lease boundary.
 
-## Architecture target and current gaps
+## HTTP and authentication semantics
 
-The target stack is one FastAPI process, SQLite through SQLAlchemy and vanilla HTML/CSS/JS. Persist authoritative operations before acknowledgement, enforce role/session/CSRF and server-resolved access grants, reconcile idempotent mutations and preserve clinical source/review provenance.
+Only five API routes are implemented: GET /api/v1/health/live, GET /api/v1/health/ready, POST /api/v1/auth/login, GET /api/v1/auth/session and POST /api/v1/auth/logout. Unknown/legacy/clinical routes return safe 404. No patient discovery, queue display, consent choice, emergency, clinical, telemetry, audit-download or AI endpoint is enabled.
 
-The initial app snapshot instead has in-memory singleton services and no durable recovery, queue/navigation implementation, authenticated actor lifecycle, complete access enforcement or reviewed commit gate. Scribe/registry behavior is deterministic simulation. The illustrative export lacks required document structure. Existing telemetry includes fixed values and cannot substantiate latency/concurrency targets. Clinical/legal/compliance claims in legacy comments and output remain unverified.
+Successful login places the secret only in Set-Cookie; responses contain actor metadata, original expiry and CSRF. Cookies are host-only/HttpOnly/SameSite=Strict/Path=/, Secure under HTTPS configuration and explicitly non-Secure only for configured loopback HTTP. No Authorization bearer or client-supplied role/patient ID establishes authority. A matching-cookie login replay returns current session metadata without Set-Cookie or renewal. Correct-credential replay without the matching usable cookie ends the orphan and returns 409 LOGIN_REAUTH_REQUIRED plus safe issuance metadata; a new deliberate key is then required. Invalid credentials fail before receipt access. A revoked-cookie logout retry can return 401 before its old receipt.
 
-The API root's missing-preview fallback is corrected during repository setup. This does not implement the planned frontend.
+Room, patient and encounter guards derive relationships from current server rows. History additionally requires the matching session/clinician/patient/facility/purpose/scope grant and open checked-in encounter; 900 seconds is a maximum, never a renewal. Tests insert explicit permission fixtures to exercise these guards; no consent UI/API workflow is implied. Protected reads keep answers out of generic receipts and recheck before releasing their buffered result. No actual clinical source query/projection/export is delivered yet.
 
-## Separate or deferred
+Live health needs no database/time-trust check; ready requires completed startup, non-draining state, trusted nondecreasing UTC/monotonic clock and a current SELECT 1 through the connection. Health exposes no dataset ID/counts and writes no audit. Backward time fails protected operations closed. Startup/listener failure releases ownership; normal shutdown closes storage without resetting sessions, deadlines or dataset identity.
 
-Insurer/TPA verification needs a separate purpose-specific authorization/release contract; it is outside the current OPD build. A clinician grant, public QR or emergency permission cannot authorize payer access. No automatic fraud, coverage or claim-eligibility verdict is established.
+## Actual local verification
 
-Inter-facility synchronization, general EHR scope, billing, dispensing and lab-result processing remain outside the core build. There is no live hospital, ABHA, ABDM, NMC, insurer or speech-provider integration.
+Windows x64; Node 24.22.1, npm 11.19.1; actual better-sqlite3 SQLite 3.53.4. System Node 22.16.0 is unchanged. Select Node 24 using a normal installation or the existing optional private PowerShell helper.
 
-## Evidence
+| Command/check | Actual result |
+| --- | --- |
+| npm run check:environment | Passed: all six runtime/two build package versions match installation/lockfile; actual memory-only SQLite binding and Argon2id correct/wrong-secret checks passed. |
+| npm test | Final run: 65 total, 57 passed, 0 failed, 0 skipped and 8 TODO markers. TODOs are not passing acceptance evidence. |
+| npm run build | Passed: four public page folders/shared helpers/assets assembled in dist; no application initialization or provider work. |
+| node --check / git diff --check | Passed for all 36 backend/script/test/shared-helper JavaScript files; diff whitespace check passed. Private generated directories contain only .gitkeep after cleanup. |
+| Build privacy tests | Real Tailwind build passed; public page/shared/assets output excluded environment, backend, data and secret sentinel; linked-output target was preserved. |
+| Maintenance/API boundary | Actual CLI init/verify/idempotent init passed from a different cwd with private stdin and invalid irrelevant frontend settings. No password was printed. Missing-database server launch fails without creating one; real initialized temporary files serve health/auth only. |
+| HTTP auth and coordinator scope | Fixed roles, cookie hash/attributes, exact expiry, login replay/orphan, CSRF/Origin/UUID, bounded login failures/concurrency, current object/grant checks, atomic audit failure, unknown-outcome reconciliation, delayed revocation and identical-key source races passed in the final suite. |
+| Shared browser helpers | Retry key/body/jitter/budget, dataset/session invalidation, late replies, memory expiry and actual auth HTTP through a Node cookie adapter passed targeted checks. This is not real-browser SameSite/CORS/TLS or connected-page evidence. |
+| Listener/runtime | Real listener startup, close/reopen deadline preservation, occupied-port cleanup, map failure and optional-ASR/seed absence checks passed. The 30-second forced-drain branch and hosted proxy/persistence behavior remain unverified. |
+| Canonical compatibility | Six fixed Python 3.14 development-reference vectors passed in JavaScript, including exact 1090-byte/5f43bfa878185851b43e2d06bc4f686d3ffce58bf9227f25c21eacab0da7240b vector, Unicode and float cases. Python is not an application/CI dependency. |
+| Recovery | Real standalone backup/manifest, new-path restore, original/backup byte preservation, ended recovered authorization, unchanged deadlines/clinical heads, and separate reset passed. |
+| Failure scope | Real writer lock and owned-child termination passed. Disk-full and precommit audit/receipt failures were controlled injections, not physical disk/power-loss tests. |
 
-The setup environment ran Python 3.12.14 on Windows: all 13 existing service tests passed. Dependency consistency and API entry points are checked during setup. These checks establish only the exercised legacy behavior and packaging. They do not establish the planned acceptance gates, clinical validity, security enforcement, resource targets or Linux behavior; consult the actual CI results for the latter.
+Earlier storage verification hit Windows temporary-directory ENOTEMPTY; bounded cleanup retries fixed the harness. This stage's initial HTTP attempt was blocked by sandbox loopback EACCES; rerunning with local-network permission exercised actual sockets. Tests found and fixed static dotfile error mapping and a browser path validator that rejected underscore-containing IDs. An Argon2 assertion was corrected to compare actual parameter values without assuming serialization order. Review also added receipt timestamps to startup's persisted-clock maximum and a regression test. The existing junction safety check runs with filesystem permission; no check is replaced by a mock or skipped. Test resources stay in owned data/test-runs directories and are cleaned after use.
+
+The setup milestone previously reproduced a 114-package lockfile install and build in a separate source-only copy. Native packages use shipped prebuilds with dependency install scripts disabled in .npmrc, avoiding an observed missing Windows SDK during implicit node-gyp. Actual SQLite and Argon2 operations passed; no OS/compiler installation or dependency substitution was made. Unsupported-platform compatibility remains unverified.
+
+## Acceptance coverage and remaining implementation
+
+Test names identify exercised storage/schema portions of D01/D02/D05-D12, C01/C02/C04/C07/C09/ASR01 and HTTP/helper portions of S01–S05/S07/S11/S13, A01–A03/A11–A13 and R01/R03–R06. They do not complete those whole gates. D03 queue transitions, D04 consent races and full domain/API/browser acceptance remain pending. Eight TODO markers keep upcoming areas visible. Official FHIR validation, live AI checks, resource targets, hosted deployment and remote CI remain NOT_RUN.
+
+1. Next: connect intake/token/navigation/queue/check-in and ALLOW/DENY/ASK WHY with server-bound 300-second requests and up-to-900-second grants, revocation and atomic closure. Reuse the implemented session/command/release boundaries.
+2. Implement manual/offline capture, save/edit/exact review/commit, entity projection, supported cited evidence and optional checks. Live clinical append currently stays unavailable.
+3. Add bounded optional Sarvam text operations after verified promotional credit/key/access, then reviewed source-checked summaries/local R4 output. No live voice or paid fallback.
+4. Complete connected pages, real domain-route/permission/race/recovery/browser/packaging checks and the scoped owned-process resource workload.
+
+Saved records belong to backend SQLite, not LocalStorage. Browser/backend integration uses HTTP; private child IPC is only a test boundary. Resource limits and p95/RSS targets remain unmeasured. Fictional records do not establish clinical safety, real identity assurance or privacy compliance.

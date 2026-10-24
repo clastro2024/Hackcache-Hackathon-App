@@ -1,67 +1,81 @@
 # VaultMed / CharakVault
 
-A provider-first clinical copilot and hospital OPD workflow prototype for HackCache '26, Problem 2: government-hospital queues and accessible navigation. Working names; final naming is deferred.
+Fictional-data OPD prototype for assisted intake, queue/navigation, patient-controlled record access and clinician-reviewed documentation.
 
-**Current state:** this repository contains the earlier backend prototype and service tests. The revised three-page app and hospital-edge architecture are implementation targets, not completed features. Use fictional fixtures and run locally; current routes do not provide the authentication and disclosure controls required for real patient data.
+**Current milestone: storage, server and authentication.** The thirteen-table database, maintenance CLI, health checks, fixed-account cookie sessions, CSRF/Origin checks and transaction/release coordinators are implemented. Shared browser request/session helpers work against the local API; pages remain setup shells. Intake, queue, consent and reviewed clinical workflows are next. See [actual evidence and next stages](docs/STATUS.md).
 
-## Run locally
+## Setup
 
-Use **Python 3.12** and Git. Clone this app repository directly; the planning workspace is not required.
+Install [Node.js 24 LTS](https://nodejs.org/en/download) and Git. This repository works independently of the planning workspace.
 
 ```powershell
-git clone https://github.com/clastro2024/Hackcache-Hackathon-App.git
-Set-Location Hackcache-Hackathon-App
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+node --version
+npm --version
+npm ci
+Copy-Item .env.example .env
+npm run check:environment
+npm run build
+npm test
 ```
 
-Open [the local entry point](http://127.0.0.1:8000/) or [interactive API docs](http://127.0.0.1:8000/docs). Stop with Ctrl+C. No API key, database service or patient account setup is needed for this legacy snapshot.
+Copy the example only when `.env` does not already exist; preserve private local settings. In a fresh macOS/Linux clone, use `cp .env.example .env` instead. Existing process environment overrides the explicitly loaded `.env` through Node's native `--env-file-if-exists` support.
 
-On macOS/Linux, create the environment with `python3.12 -m venv .venv` and replace `.\.venv\Scripts\python.exe` with `.venv/bin/python`. The commands use the environment's Python directly, so PowerShell activation is optional.
+If this Windows checkout has a private portable Node under `.tools`, `. ./scripts/use-node.ps1` selects it for the current PowerShell session. It is optional, ignored by Git and not required in a fresh clone. A system Node 22 installation does not satisfy this project's engine requirement.
 
-For runtime dependencies only, install `-r requirements.txt`. Direct and transitive dependency versions are pinned; the development file adds pytest and the HTTP test client.
+The exact eight direct packages and their transitive dependencies are locked. `.npmrc` disables dependency install scripts: these pinned native packages ship prebuilt binaries. This avoids an observed implicit node-gyp build failing on a missing Windows SDK. `check:environment` actually loads SQLite and Argon2, verifies SQLite >=3.51.3, probes Argon2id hash/verify and checks package versions. Unsupported prebuild/platform combinations must fail this check; skipping scripts alone is not compatibility evidence. No compiler, Python environment or AI SDK is an application prerequisite for the verified setup.
 
-## What is here
+## Commands
 
-| Capability | Current snapshot |
+| Command | Current behavior |
 | --- | --- |
-| Clinical event storage and history projection | Synthetic, in-memory events with hash fields and a projection service; no durable database or complete canonical-chain verification. |
-| Source-linked history queries and evidence states | Bounded legacy matching over sample records; not general clinical NLP or proof of safety/completeness. |
-| Allow / Deny / Ask Why | Earlier per-question consent service. Request expiry and access enforcement are incomplete; it is not the target 900-second encounter policy. |
-| Registry and clinical checks | Seeded registry mock and limited advisory rules; no live NMC verification or clinical validation. |
-| Consultation capture | Fixed simulated transcript/extraction; the legacy scribe route directly appends an event. Reviewed draft/commit flow remains to build. |
-| Audit and FHIR-like output | In-memory audit and illustrative output; legal/certification wording in legacy responses is not an established guarantee. |
-| Queue, navigation and three-page UI | Planned. The old workspace preview is not packaged or required here. |
+| `npm ci` | Reproduce dependencies from package-lock.json, including build dependencies. |
+| `npm run check:environment` | Check Node 24, locked package versions, native SQLite and Argon2id; memory-only probe, no application database. |
+| `npm run build` | Compile shared Tailwind and assemble public page shells/shared modules/assets in dist. |
+| `npm test` | Run setup, file-based storage/recovery, real HTTP auth, coordinator and shared browser-helper checks; unfinished domain suites stay TODO. |
+| `npm start` | Verify the existing database/map/public files, then start one Express listener. Missing/invalid storage fails without creating a database. |
+| `npm run manage -- --help` | Show implemented init/verify/backup/restore/reset options. |
+| `npm run manage -- init --db data/runtime/vaultmed.sqlite3 --seed opd-demo-v1` | Privately prompt for fictional account passwords and explicitly initialize a new dataset. Matching existing initialization is a verified no-op. |
+| `node tests/resource-run.js` | Exit nonzero; no benchmark or resource claim. |
 
-See [features, architecture and known gaps](docs/STATUS.md) before assessing the prototype. Some legacy comments/response labels overstate guarantees. Hardcoded telemetry values are not benchmarks; a passing test does not establish authentication, clinical safety, compliance or production readiness.
+After explicit initialization below, run `npm start`. The example configuration listens at http://127.0.0.1:3000. `GET /api/v1/health/live` reports process availability; `GET /api/v1/health/ready` checks current clock/storage readiness. `/login/` still displays a setup shell: the sign-in form and patient journey are not connected. `dist` is generated public output; no hosted deployment is established.
 
-## Test
+Implemented auth routes are `POST /api/v1/auth/login`, `GET /api/v1/auth/session` and `POST /api/v1/auth/logout`. POST requires JSON, the exact configured frontend Origin and a UUID X-Idempotency-Key; logout also requires the session's X-CSRF-Token. Login accepts only username/password and returns safe actor metadata, absolute expiry and a page-memory CSRF value. The opaque cookie is HttpOnly/SameSite=Strict/host-only and Secure for HTTPS configuration; only explicitly configured loopback HTTP omits Secure. GET session never renews the two-hour deadline. Clinical/queue/consent routes return safe 404 until implemented.
 
-From this repository's root:
+## Configuration and private data
+
+`.env.example` documents PORT, HOST, FRONTEND_ORIGIN, API_ORIGIN, VAULTMED_DB_PATH, USE_MOCK_ASR, SARVAM_ENABLED, SARVAM_API_KEY and PUBLIC_API_BASE_URL. Keep `.env` private. Defaults use loopback HTTP, mock voice and disabled text AI. Do not paste provider keys into chat. No provider account, payment or request is needed for setup.
+
+Only the parsed PUBLIC_API_BASE_URL enters browser configuration. Database/manifest paths are restricted to ignored data/runtime, data/backups, data/reports or data/test-runs directories; data/fixtures is for tracked credential-free source inputs. The seed contains four fictional patients, seven fixed accounts, rooms 12/18, waiting/current/absent checkpoints, penicillin-positive and discontinued-Ecosprin sources, and a scoped latex-negative source. No mental-health diagnosis is inferred. ASR has three offline examples; the sample map is fictional and not surveyed. Capture, question answering and navigation APIs remain pending.
+
+The default working database is not initialized by install/build/test. Explicit initialization requires a private password for each fixed username: staff, doctor12, doctor18 and patient-a through patient-d. Passwords are 12–128 characters, hashed with Argon2id outside transactions, and never written into fixtures or receipts. The CLI prompts without echo; private automation may pass a bounded username/password JSON map through stdin with --passwords-stdin. Never put passwords in arguments, committed files or chat. Initialization creates no sessions or grants. Source dates remain source dates; actual initialization binds event recording time before hashing and records its own audit.
+
+## Stopped maintenance
+
+All maintenance and the backend hold the same cooperative per-file process lease. Stop the backend before running maintenance; a live or unknown lease owner is refused. Dead-process leases can be recovered without killing another process or deleting WAL/SHM files. This is coordination for cooperating entrypoints, not protection against a privileged host operator.
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/ -q
-.\.venv\Scripts\python.exe -m pip check
+npm run manage -- verify --db data/runtime/vaultmed.sqlite3
+npm run manage -- backup --db data/runtime/vaultmed.sqlite3 --out data/backups/opd-baseline.sqlite3
+npm run manage -- restore --backup data/backups/opd-baseline.sqlite3 --new-db data/runtime/restored-001.sqlite3
+npm run manage -- reset --db data/runtime/vaultmed.sqlite3 --new-db data/runtime/fictional-002.sqlite3 --seed opd-demo-v1
 ```
 
-The GitHub Actions workflow runs the service suite and API entry-point checks on Python 3.12 for Windows and Linux. Remote workflow results must be checked in the repository's Actions tab; committing the workflow alone does not establish that it passed.
+Outputs must be new paths. Backup uses SQLite's backup API, verifies a standalone DELETE-journal candidate and writes its checksum/counts/clinical-head manifest beside it; the source remains WAL. Restore checks the manifest/checksum/schema/runtime/chains, creates a separate WAL file, revokes recovered sessions, cancels pending requests, ends active grants and assigns a new dataset ID without rewriting clinical events. It pauses rooms for staff reconciliation of the recovered checkpoint. It does not switch .env automatically. Reset first creates a verified backup, preserves the old database and initializes a separate fictional dataset with new private passwords.
+
+Verification checks actual SQLite >=3.51.3, WAL/FULL/FK/50 ms busy settings, schema definitions and append guards, database/FK integrity, queue/auth relationship invariants and canonical clinical chains. Ordinary reopen retains original deadlines. Shared permission/grant/release guards are implemented and exercised with explicit fictional authorization fixtures; consent creation and clinical routes remain pending. There is no auto-migration, auto-repair or absolute-immutability claim.
 
 ## Structure
 
-```text
-backend/              FastAPI routes, models and legacy services
-defense/              Supporting utilities; not all are wired into routes
-tests/                Existing service-level tests
-docs/STATUS.md        Current capabilities and intended product scope
-CONTRIBUTING.md       Setup, daily collaboration and maintenance
-requirements*.txt     Runtime/development dependency entry points
-constraints.txt       Tested dependency pins
-.github/workflows/    Automated checks
-```
+| Path | Ownership |
+| --- | --- |
+| frontend/login, patients, encounter, patient-visit | Separate HTML/CSS/JavaScript page shells; no implemented workflows. |
+| frontend/shared | Public configuration, Tailwind source, memory-only API/session helpers and text-safe DOM helpers. |
+| backend and backend/services | Settings, storage, maintenance, auth/server/coordinators, audit/receipts and canonical verification; domain workflows remain unfinished. |
+| data/fixtures | Validated fictional seed, optional offline-ASR registry and sample map. |
+| data/runtime, backups, reports, test-runs | Private generated directories; ignored by Git and excluded from build. |
+| assets | Public CSS/images/icons/fonts; generated Tailwind is ignored. |
+| scripts | Build, environment verification and optional Windows runtime helper. |
+| tests | Setup/storage/recovery, HTTP authentication, coordinator races, browser helpers, fixed canonical vectors, TODO domain suites and unfinished resource runner. |
+| docs and .github/workflows | App-owned status and setup CI; remote CI results require an actual run. |
 
-## Repository ownership
-
-This is the independent app repository, with fresh history from its setup. Public app code, tests, dependency files and app documentation belong here. Planning notes, design explorations and the larger team workspace stay in their own repository. No subtree synchronization or submodule initialization is required.
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the full operational guide and [SECURITY.md](SECURITY.md) for current exposure limits. A project license has not yet been selected.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Hosted origins, cookies, TLS/proxy settings and persistence remain deployment work; there is no production identity, medical safety or compliance guarantee.

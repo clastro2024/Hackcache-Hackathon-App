@@ -1,12 +1,16 @@
 # App repository instructions
 
-This is the independent VaultMed / CharakVault app repository. Read README.md, docs/STATUS.md and CONTRIBUTING.md first. Preserve unrelated work.
+This is the independent VaultMed / CharakVault application repository. Preserve unrelated work. Read README.md and docs/STATUS.md for actual implementation status.
 
-- Current code is an earlier in-memory backend prototype; distinguish it from the intended three-page app and 900-second encounter-access model.
-- Keep Python/FastAPI, the planned SQLite/SQLAlchemy persistence and vanilla frontend. Avoid extra services/frameworks for the two-person, 48-hour scope.
-- Use fictional data. Never treat a UI role selector, mock registry ID or public QR as authentication. Enforce authorization on the server before clinical disclosure.
-- Preserve positive, scoped documented-negative and not-recorded evidence distinctions; missing records never prove clinical absence or safety.
-- Clinical corrections append history. Require clinician review before final clinical commit; optional clinical checks remain non-blocking.
-- Label simulations and unverified claims. Do not invent integration, compliance, clinical safety, legal immunity or performance evidence.
-- Run `python -m pytest tests/ -q` from this repository root using its virtual environment; report actual results and blockers.
-- Commit app changes here. The surrounding planning repository ignores this clone. Follow its instructions too when present, but keep public app docs self-contained.
+- Node.js 24 LTS, JavaScript ES modules, Express 5, better-sqlite3, strict Zod, argon2, cookie and helmet. HTML/Tailwind/vanilla JavaScript; no ORM, bundler, additional backend or AI SDK.
+- Current milestone includes setup/storage, server/health/shutdown, fixed-account login/session/logout, Origin/CSRF, permission and command/release coordinators, and shared browser API/session helpers. Page workflows, intake/queue/consent, reviewed clinical records and hosting remain unfinished. Helper/HTTP tests do not complete application acceptance.
+- One backend process, one database connection and one transaction owner. Keep business/audit/receipts atomic; no network, asynchronous wait or password hashing inside transactions.
+- Fixed fictional accounts; opaque server-side cookie sessions and CSRF. Server-bound role/object permission and consent are separate. Maxima: sessions 7200 seconds, requests 300 seconds, encounter grants 900 seconds.
+- Authenticate/authorize before matching a safe receipt; new-action version/state guards follow receipt matching. Preserve X-Idempotency-Key intent on retries.
+- Clinical history appends; corrections supersede. Preserve the v1 canonical bytes and source/review provenance. Missing information never proves absence or clinical safety. Review the exact draft before commit.
+- All persistent data belongs under data. Only frontend/assets may enter dist. Never serve the repository root, environment, database, backups, reports or test data. Keep credentials/clinical contents out of logs and Git.
+- SARVAM_ENABLED defaults false. No provider calls during install/build/start/test. Live text requires verified promotional credit/key/access and explicit scope; no paid fallback or live speech.
+- Run affected checks from this repository: npm run check:environment, npm run build, npm test. Functional acceptance TODOs remain NOT_RUN. Never relabel historical Python results as JavaScript evidence.
+- Native packages currently use shipped prebuilds with install scripts disabled in .npmrc. Verify actual bindings after a lockfile/dependency/platform change. Do not silently enable source builds or install a global toolchain.
+- Keep setup self-contained. App owns its source, lockfile, documentation and CI; the surrounding workspace is a separate repository. Do not commit, push or publish without instruction.
+- Do not spawn subagents unless explicitly requested. Keep scope viable for two people in 48 hours.

@@ -1,0 +1,341 @@
+{
+  "reference": "Python 3.14.0 json.dumps(sort_keys=True,separators=(comma,colon),ensure_ascii=False,allow_nan=False); development-only reference, no Python runtime dependency",
+  "vectors": [
+    {
+      "name": "published-ascii",
+      "event": {
+        "ledger_format": "v1",
+        "event_id": "evt_demo_stop",
+        "patient_id": "patient_demo_ledger",
+        "encounter_id": null,
+        "sequence": 1,
+        "facility_id": "facility_demo",
+        "event_type": "MEDICATION_RECORDED",
+        "entity_id": "entity_demo_ecosprin",
+        "supersedes_event_id": null,
+        "change_kind": "INITIAL",
+        "change_reason": null,
+        "occurred_on": "2026-02-02",
+        "occurrence_text": null,
+        "source": {
+          "kind": "DOCUMENT_REFERENCE",
+          "reference": "fixture_stop_note",
+          "authored_on": "2026-02-02",
+          "original_author": "Fictional source clinician",
+          "quote": "Ecosprin discontinued in this synthetic note."
+        },
+        "payload": {
+          "concept": {
+            "text": "Ecosprin",
+            "term_key": "ecosprin_demo",
+            "coding": null
+          },
+          "statement_kind": "PRESCRIBED",
+          "status": "DISCONTINUED",
+          "dose_text": null,
+          "route_text": null,
+          "frequency_text": null,
+          "duration_text": null,
+          "reason": "Stop instruction recorded in fictional source"
+        },
+        "capture": {
+          "method": "FIXTURE_SEED",
+          "fixture_id": "fixture_stop_note",
+          "extractor_version": null,
+          "confidence": null
+        },
+        "recorded_by": null,
+        "recorded_at": "2026-10-23T04:30:00Z",
+        "review": {
+          "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+          "reviewed_by": null,
+          "reviewed_at": null
+        },
+        "synthetic": true
+      },
+      "canonical": "{\"capture\":{\"confidence\":null,\"extractor_version\":null,\"fixture_id\":\"fixture_stop_note\",\"method\":\"FIXTURE_SEED\"},\"change_kind\":\"INITIAL\",\"change_reason\":null,\"encounter_id\":null,\"entity_id\":\"entity_demo_ecosprin\",\"event_id\":\"evt_demo_stop\",\"event_type\":\"MEDICATION_RECORDED\",\"facility_id\":\"facility_demo\",\"ledger_format\":\"v1\",\"occurred_on\":\"2026-02-02\",\"occurrence_text\":null,\"patient_id\":\"patient_demo_ledger\",\"payload\":{\"concept\":{\"coding\":null,\"term_key\":\"ecosprin_demo\",\"text\":\"Ecosprin\"},\"dose_text\":null,\"duration_text\":null,\"frequency_text\":null,\"reason\":\"Stop instruction recorded in fictional source\",\"route_text\":null,\"statement_kind\":\"PRESCRIBED\",\"status\":\"DISCONTINUED\"},\"recorded_at\":\"2026-10-23T04:30:00Z\",\"recorded_by\":null,\"review\":{\"reviewed_at\":null,\"reviewed_by\":null,\"status\":\"FIXTURE_NOT_CLINICALLY_VALIDATED\"},\"sequence\":1,\"source\":{\"authored_on\":\"2026-02-02\",\"kind\":\"DOCUMENT_REFERENCE\",\"original_author\":\"Fictional source clinician\",\"quote\":\"Ecosprin discontinued in this synthetic note.\",\"reference\":\"fixture_stop_note\"},\"supersedes_event_id\":null,\"synthetic\":true}",
+      "utf8_length": 1090,
+      "event_hash": "5f43bfa878185851b43e2d06bc4f686d3ffce58bf9227f25c21eacab0da7240b"
+    },
+    {
+      "name": "unicode-float-one",
+      "event": {
+        "ledger_format": "v1",
+        "event_id": "evt_demo_stop",
+        "patient_id": "patient_demo_ledger",
+        "encounter_id": null,
+        "sequence": 1,
+        "facility_id": "facility_demo",
+        "event_type": "MEDICATION_RECORDED",
+        "entity_id": "entity_demo_ecosprin",
+        "supersedes_event_id": null,
+        "change_kind": "INITIAL",
+        "change_reason": null,
+        "occurred_on": "2026-02-02",
+        "occurrence_text": null,
+        "source": {
+          "kind": "DOCUMENT_REFERENCE",
+          "reference": "fixture_stop_note",
+          "authored_on": "2026-02-02",
+          "original_author": "Fictional source clinician",
+          "quote": "कल्‍पनिक स्रोत 😀 — रोगी की रिपोर्ट\nदूसरी पंक्ति"
+        },
+        "payload": {
+          "concept": {
+            "text": "Ecosprin",
+            "term_key": "ecosprin_demo",
+            "coding": null
+          },
+          "statement_kind": "PRESCRIBED",
+          "status": "DISCONTINUED",
+          "dose_text": null,
+          "route_text": null,
+          "frequency_text": null,
+          "duration_text": null,
+          "reason": "Stop instruction recorded in fictional source"
+        },
+        "capture": {
+          "method": "FIXTURE_SEED",
+          "fixture_id": "fixture_stop_note",
+          "extractor_version": null,
+          "confidence": 1.0
+        },
+        "recorded_by": null,
+        "recorded_at": "2026-10-23T04:30:00Z",
+        "review": {
+          "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+          "reviewed_by": null,
+          "reviewed_at": null
+        },
+        "synthetic": true
+      },
+      "canonical": "{\"capture\":{\"confidence\":1.0,\"extractor_version\":null,\"fixture_id\":\"fixture_stop_note\",\"method\":\"FIXTURE_SEED\"},\"change_kind\":\"INITIAL\",\"change_reason\":null,\"encounter_id\":null,\"entity_id\":\"entity_demo_ecosprin\",\"event_id\":\"evt_demo_stop\",\"event_type\":\"MEDICATION_RECORDED\",\"facility_id\":\"facility_demo\",\"ledger_format\":\"v1\",\"occurred_on\":\"2026-02-02\",\"occurrence_text\":null,\"patient_id\":\"patient_demo_ledger\",\"payload\":{\"concept\":{\"coding\":null,\"term_key\":\"ecosprin_demo\",\"text\":\"Ecosprin\"},\"dose_text\":null,\"duration_text\":null,\"frequency_text\":null,\"reason\":\"Stop instruction recorded in fictional source\",\"route_text\":null,\"statement_kind\":\"PRESCRIBED\",\"status\":\"DISCONTINUED\"},\"recorded_at\":\"2026-10-23T04:30:00Z\",\"recorded_by\":null,\"review\":{\"reviewed_at\":null,\"reviewed_by\":null,\"status\":\"FIXTURE_NOT_CLINICALLY_VALIDATED\"},\"sequence\":1,\"source\":{\"authored_on\":\"2026-02-02\",\"kind\":\"DOCUMENT_REFERENCE\",\"original_author\":\"Fictional source clinician\",\"quote\":\"कल्‍पनिक स्रोत 😀 — रोगी की रिपोर्ट\\nदूसरी पंक्ति\",\"reference\":\"fixture_stop_note\"},\"supersedes_event_id\":null,\"synthetic\":true}",
+      "utf8_length": 1171,
+      "event_hash": "f50878c1f5e2aa32bfbc4ab4988db10bb5ed90430f02ac8c1bc1243883019a6a"
+    },
+    {
+      "name": "small-exponent",
+      "event": {
+        "ledger_format": "v1",
+        "event_id": "evt_demo_stop",
+        "patient_id": "patient_demo_ledger",
+        "encounter_id": null,
+        "sequence": 1,
+        "facility_id": "facility_demo",
+        "event_type": "MEDICATION_RECORDED",
+        "entity_id": "entity_demo_ecosprin",
+        "supersedes_event_id": null,
+        "change_kind": "INITIAL",
+        "change_reason": null,
+        "occurred_on": "2026-02-02",
+        "occurrence_text": null,
+        "source": {
+          "kind": "DOCUMENT_REFERENCE",
+          "reference": "fixture_stop_note",
+          "authored_on": "2026-02-02",
+          "original_author": "Fictional source clinician",
+          "quote": "Ecosprin discontinued in this synthetic note."
+        },
+        "payload": {
+          "concept": {
+            "text": "Ecosprin",
+            "term_key": "ecosprin_demo",
+            "coding": null
+          },
+          "statement_kind": "PRESCRIBED",
+          "status": "DISCONTINUED",
+          "dose_text": null,
+          "route_text": null,
+          "frequency_text": null,
+          "duration_text": null,
+          "reason": "Stop instruction recorded in fictional source"
+        },
+        "capture": {
+          "method": "FIXTURE_SEED",
+          "fixture_id": "fixture_stop_note",
+          "extractor_version": null,
+          "confidence": 1e-07
+        },
+        "recorded_by": null,
+        "recorded_at": "2026-10-23T04:30:00Z",
+        "review": {
+          "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+          "reviewed_by": null,
+          "reviewed_at": null
+        },
+        "synthetic": true
+      },
+      "canonical": "{\"capture\":{\"confidence\":1e-07,\"extractor_version\":null,\"fixture_id\":\"fixture_stop_note\",\"method\":\"FIXTURE_SEED\"},\"change_kind\":\"INITIAL\",\"change_reason\":null,\"encounter_id\":null,\"entity_id\":\"entity_demo_ecosprin\",\"event_id\":\"evt_demo_stop\",\"event_type\":\"MEDICATION_RECORDED\",\"facility_id\":\"facility_demo\",\"ledger_format\":\"v1\",\"occurred_on\":\"2026-02-02\",\"occurrence_text\":null,\"patient_id\":\"patient_demo_ledger\",\"payload\":{\"concept\":{\"coding\":null,\"term_key\":\"ecosprin_demo\",\"text\":\"Ecosprin\"},\"dose_text\":null,\"duration_text\":null,\"frequency_text\":null,\"reason\":\"Stop instruction recorded in fictional source\",\"route_text\":null,\"statement_kind\":\"PRESCRIBED\",\"status\":\"DISCONTINUED\"},\"recorded_at\":\"2026-10-23T04:30:00Z\",\"recorded_by\":null,\"review\":{\"reviewed_at\":null,\"reviewed_by\":null,\"status\":\"FIXTURE_NOT_CLINICALLY_VALIDATED\"},\"sequence\":1,\"source\":{\"authored_on\":\"2026-02-02\",\"kind\":\"DOCUMENT_REFERENCE\",\"original_author\":\"Fictional source clinician\",\"quote\":\"Ecosprin discontinued in this synthetic note.\",\"reference\":\"fixture_stop_note\"},\"supersedes_event_id\":null,\"synthetic\":true}",
+      "utf8_length": 1091,
+      "event_hash": "3aaa55ef1e42b27ff521101794d0b526dd1610946c28a68fb286d8b29808917f"
+    },
+    {
+      "name": "decimal-boundary",
+      "event": {
+        "ledger_format": "v1",
+        "event_id": "evt_demo_stop",
+        "patient_id": "patient_demo_ledger",
+        "encounter_id": null,
+        "sequence": 1,
+        "facility_id": "facility_demo",
+        "event_type": "MEDICATION_RECORDED",
+        "entity_id": "entity_demo_ecosprin",
+        "supersedes_event_id": null,
+        "change_kind": "INITIAL",
+        "change_reason": null,
+        "occurred_on": "2026-02-02",
+        "occurrence_text": null,
+        "source": {
+          "kind": "DOCUMENT_REFERENCE",
+          "reference": "fixture_stop_note",
+          "authored_on": "2026-02-02",
+          "original_author": "Fictional source clinician",
+          "quote": "Ecosprin discontinued in this synthetic note."
+        },
+        "payload": {
+          "concept": {
+            "text": "Ecosprin",
+            "term_key": "ecosprin_demo",
+            "coding": null
+          },
+          "statement_kind": "PRESCRIBED",
+          "status": "DISCONTINUED",
+          "dose_text": null,
+          "route_text": null,
+          "frequency_text": null,
+          "duration_text": null,
+          "reason": "Stop instruction recorded in fictional source"
+        },
+        "capture": {
+          "method": "FIXTURE_SEED",
+          "fixture_id": "fixture_stop_note",
+          "extractor_version": null,
+          "confidence": 0.0001
+        },
+        "recorded_by": null,
+        "recorded_at": "2026-10-23T04:30:00Z",
+        "review": {
+          "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+          "reviewed_by": null,
+          "reviewed_at": null
+        },
+        "synthetic": true
+      },
+      "canonical": "{\"capture\":{\"confidence\":0.0001,\"extractor_version\":null,\"fixture_id\":\"fixture_stop_note\",\"method\":\"FIXTURE_SEED\"},\"change_kind\":\"INITIAL\",\"change_reason\":null,\"encounter_id\":null,\"entity_id\":\"entity_demo_ecosprin\",\"event_id\":\"evt_demo_stop\",\"event_type\":\"MEDICATION_RECORDED\",\"facility_id\":\"facility_demo\",\"ledger_format\":\"v1\",\"occurred_on\":\"2026-02-02\",\"occurrence_text\":null,\"patient_id\":\"patient_demo_ledger\",\"payload\":{\"concept\":{\"coding\":null,\"term_key\":\"ecosprin_demo\",\"text\":\"Ecosprin\"},\"dose_text\":null,\"duration_text\":null,\"frequency_text\":null,\"reason\":\"Stop instruction recorded in fictional source\",\"route_text\":null,\"statement_kind\":\"PRESCRIBED\",\"status\":\"DISCONTINUED\"},\"recorded_at\":\"2026-10-23T04:30:00Z\",\"recorded_by\":null,\"review\":{\"reviewed_at\":null,\"reviewed_by\":null,\"status\":\"FIXTURE_NOT_CLINICALLY_VALIDATED\"},\"sequence\":1,\"source\":{\"authored_on\":\"2026-02-02\",\"kind\":\"DOCUMENT_REFERENCE\",\"original_author\":\"Fictional source clinician\",\"quote\":\"Ecosprin discontinued in this synthetic note.\",\"reference\":\"fixture_stop_note\"},\"supersedes_event_id\":null,\"synthetic\":true}",
+      "utf8_length": 1092,
+      "event_hash": "2728d1fca8287f20e0ca64db76c819e4f80de31eb8c92b809f959323a03713b5"
+    },
+    {
+      "name": "negative-zero",
+      "event": {
+        "ledger_format": "v1",
+        "event_id": "evt_demo_stop",
+        "patient_id": "patient_demo_ledger",
+        "encounter_id": null,
+        "sequence": 1,
+        "facility_id": "facility_demo",
+        "event_type": "MEDICATION_RECORDED",
+        "entity_id": "entity_demo_ecosprin",
+        "supersedes_event_id": null,
+        "change_kind": "INITIAL",
+        "change_reason": null,
+        "occurred_on": "2026-02-02",
+        "occurrence_text": null,
+        "source": {
+          "kind": "DOCUMENT_REFERENCE",
+          "reference": "fixture_stop_note",
+          "authored_on": "2026-02-02",
+          "original_author": "Fictional source clinician",
+          "quote": "Ecosprin discontinued in this synthetic note."
+        },
+        "payload": {
+          "concept": {
+            "text": "Ecosprin",
+            "term_key": "ecosprin_demo",
+            "coding": null
+          },
+          "statement_kind": "PRESCRIBED",
+          "status": "DISCONTINUED",
+          "dose_text": null,
+          "route_text": null,
+          "frequency_text": null,
+          "duration_text": null,
+          "reason": "Stop instruction recorded in fictional source"
+        },
+        "capture": {
+          "method": "FIXTURE_SEED",
+          "fixture_id": "fixture_stop_note",
+          "extractor_version": null,
+          "confidence": -0.0
+        },
+        "recorded_by": null,
+        "recorded_at": "2026-10-23T04:30:00Z",
+        "review": {
+          "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+          "reviewed_by": null,
+          "reviewed_at": null
+        },
+        "synthetic": true
+      },
+      "canonical": "{\"capture\":{\"confidence\":-0.0,\"extractor_version\":null,\"fixture_id\":\"fixture_stop_note\",\"method\":\"FIXTURE_SEED\"},\"change_kind\":\"INITIAL\",\"change_reason\":null,\"encounter_id\":null,\"entity_id\":\"entity_demo_ecosprin\",\"event_id\":\"evt_demo_stop\",\"event_type\":\"MEDICATION_RECORDED\",\"facility_id\":\"facility_demo\",\"ledger_format\":\"v1\",\"occurred_on\":\"2026-02-02\",\"occurrence_text\":null,\"patient_id\":\"patient_demo_ledger\",\"payload\":{\"concept\":{\"coding\":null,\"term_key\":\"ecosprin_demo\",\"text\":\"Ecosprin\"},\"dose_text\":null,\"duration_text\":null,\"frequency_text\":null,\"reason\":\"Stop instruction recorded in fictional source\",\"route_text\":null,\"statement_kind\":\"PRESCRIBED\",\"status\":\"DISCONTINUED\"},\"recorded_at\":\"2026-10-23T04:30:00Z\",\"recorded_by\":null,\"review\":{\"reviewed_at\":null,\"reviewed_by\":null,\"status\":\"FIXTURE_NOT_CLINICALLY_VALIDATED\"},\"sequence\":1,\"source\":{\"authored_on\":\"2026-02-02\",\"kind\":\"DOCUMENT_REFERENCE\",\"original_author\":\"Fictional source clinician\",\"quote\":\"Ecosprin discontinued in this synthetic note.\",\"reference\":\"fixture_stop_note\"},\"supersedes_event_id\":null,\"synthetic\":true}",
+      "utf8_length": 1090,
+      "event_hash": "43722d5eebc46ae76cec5d1a6f61693bd7adcb380f26b344c9518e4f50445c08"
+    },
+    {
+      "name": "fraction",
+      "event": {
+        "ledger_format": "v1",
+        "event_id": "evt_demo_stop",
+        "patient_id": "patient_demo_ledger",
+        "encounter_id": null,
+        "sequence": 1,
+        "facility_id": "facility_demo",
+        "event_type": "MEDICATION_RECORDED",
+        "entity_id": "entity_demo_ecosprin",
+        "supersedes_event_id": null,
+        "change_kind": "INITIAL",
+        "change_reason": null,
+        "occurred_on": "2026-02-02",
+        "occurrence_text": null,
+        "source": {
+          "kind": "DOCUMENT_REFERENCE",
+          "reference": "fixture_stop_note",
+          "authored_on": "2026-02-02",
+          "original_author": "Fictional source clinician",
+          "quote": "Ecosprin discontinued in this synthetic note."
+        },
+        "payload": {
+          "concept": {
+            "text": "Ecosprin",
+            "term_key": "ecosprin_demo",
+            "coding": null
+          },
+          "statement_kind": "PRESCRIBED",
+          "status": "DISCONTINUED",
+          "dose_text": null,
+          "route_text": null,
+          "frequency_text": null,
+          "duration_text": null,
+          "reason": "Stop instruction recorded in fictional source"
+        },
+        "capture": {
+          "method": "FIXTURE_SEED",
+          "fixture_id": "fixture_stop_note",
+          "extractor_version": null,
+          "confidence": 0.92
+        },
+        "recorded_by": null,
+        "recorded_at": "2026-10-23T04:30:00Z",
+        "review": {
+          "status": "FIXTURE_NOT_CLINICALLY_VALIDATED",
+          "reviewed_by": null,
+          "reviewed_at": null
+        },
+        "synthetic": true
+      },
+      "canonical": "{\"capture\":{\"confidence\":0.92,\"extractor_version\":null,\"fixture_id\":\"fixture_stop_note\",\"method\":\"FIXTURE_SEED\"},\"change_kind\":\"INITIAL\",\"change_reason\":null,\"encounter_id\":null,\"entity_id\":\"entity_demo_ecosprin\",\"event_id\":\"evt_demo_stop\",\"event_type\":\"MEDICATION_RECORDED\",\"facility_id\":\"facility_demo\",\"ledger_format\":\"v1\",\"occurred_on\":\"2026-02-02\",\"occurrence_text\":null,\"patient_id\":\"patient_demo_ledger\",\"payload\":{\"concept\":{\"coding\":null,\"term_key\":\"ecosprin_demo\",\"text\":\"Ecosprin\"},\"dose_text\":null,\"duration_text\":null,\"frequency_text\":null,\"reason\":\"Stop instruction recorded in fictional source\",\"route_text\":null,\"statement_kind\":\"PRESCRIBED\",\"status\":\"DISCONTINUED\"},\"recorded_at\":\"2026-10-23T04:30:00Z\",\"recorded_by\":null,\"review\":{\"reviewed_at\":null,\"reviewed_by\":null,\"status\":\"FIXTURE_NOT_CLINICALLY_VALIDATED\"},\"sequence\":1,\"source\":{\"authored_on\":\"2026-02-02\",\"kind\":\"DOCUMENT_REFERENCE\",\"original_author\":\"Fictional source clinician\",\"quote\":\"Ecosprin discontinued in this synthetic note.\",\"reference\":\"fixture_stop_note\"},\"supersedes_event_id\":null,\"synthetic\":true}",
+      "utf8_length": 1090,
+      "event_hash": "d6371a5735ee734422246c3296583836654a35eea07d26cab7a6b38029718431"
+    }
+  ]
+}
