@@ -38,11 +38,11 @@ Sign in at `/login/`. Provider accounts open `/patients/`; patient accounts open
 5. With permission, use the six supported record questions and inspect the actual source citations. Missing information is not evidence of clinical absence. Optional checks currently return `NOT_EVALUATED`.
 6. After the reviewed record is committed, the patient can deliberately view/print the summary and download their audit or local FHIR JSON. Completing the encounter is separate from saving the record and does not automatically call the next patient.
 
-The seeded ledger example is bound to `doctor12` and `patient-a`. New local registration does not create a patient login. Staff-assisted consent, fuller patient linking, token printing and complete Hindi translation still have frontend work remaining; see [frontend status](../frontend/README.md). Current UI questions use the deterministic local route; optional Sarvam text routes are backend functionality awaiting their browser integration.
+The seeded ledger example is bound to `doctor12` and `patient-a`. New local registration does not create a patient login. The current pages also contain staff-assisted sharing, print/download and language controls; fuller patient linking, complete translation and browser/hosted verification require checking against the latest [frontend evidence](../frontend/README.md). Assisted sharing must record the patient's actual choice, independently of the requesting clinician.
 
 ## Optional AI
 
-Default setup requires no API key and makes no live AI calls. Voice is simulated/manual. To deliberately activate Sarvam text, follow [AI setup](AI.md), supply the key only in private server configuration and confirm actual positive promotional credit. `npm run ai -- status` checks readiness without calling the provider. Never commit `.env`, passwords, databases or credit confirmations. Credit confirmation expires; it is not a balance API or a guarantee of free usage.
+Default setup requires no API key and makes no live AI calls. Voice is simulated/manual. The encounter page includes an optional six-topic text-interpretation choice and a consultation-brief proposal control; their complete browser integration still needs verification. A proposal must be deliberately used/edited, saved and reviewed before commit. To deliberately activate Sarvam text, follow [AI setup](AI.md), supply the key only in private server configuration and confirm actual positive promotional credit. `npm run ai -- status` checks readiness without calling the provider. Never commit `.env`, passwords, databases or credit confirmations. Credit confirmation expires; it is not a balance API or a guarantee of free usage.
 
 ## Checks and hosting
 

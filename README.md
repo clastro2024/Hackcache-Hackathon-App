@@ -4,7 +4,7 @@ Fictional-data OPD prototype for assisted intake, queue/navigation, patient-cont
 
 **Start here: [run and use the MVP](docs/QUICKSTART.md)** — first initialization, account roles and the end-to-end workflow. Detailed setup and engineering status follow below.
 
-**Current milestone: backend workflows, output and Sarvam integration.** Manual/scripted capture, exact review/commit, cited history, reviewed encounter summaries, local R4 downloads and own-patient audit history/checksums use the backend. Sarvam text routes are integrated, live-checked and locally enabled behind an expiring private credit confirmation. Render supports a private key/credit secret; no hosted deployment is established. Broader AI quality evaluation remains pending; see [AI setup/evidence](docs/AI.md). Official FHIR validation stays NOT_RUN. Frontend work is separate; connected browser flows are not established by API tests. See [implemented API](docs/API.md), [operations](docs/OPERATIONS.md) and [actual evidence/next stages](docs/STATUS.md).
+**Current milestone: backend workflows, output and Sarvam integration.** Manual/scripted capture, exact review/commit, cited history, reviewed encounter summaries, local R4 downloads and own-patient audit history/checksums use the backend. Sarvam text routes are integrated, live-checked and locally enabled behind an expiring private credit confirmation. A ten-case synthetic evaluation found wrong-topic/injection limitations; see [AI setup and actual results](docs/AI.md). Windows/Ubuntu CI passed. Render supports a private key/credit secret; no hosted deployment is established. Official FHIR validation stays NOT_RUN. Frontend work is separate; connected browser flows are not established by API tests. See [implemented API](docs/API.md), [operations](docs/OPERATIONS.md) and [actual evidence/next stages](docs/STATUS.md).
 
 ## Setup
 
@@ -88,7 +88,7 @@ Verification checks actual SQLite >=3.51.3, WAL/FULL/FK/50 ms busy settings, sch
 | assets | Public CSS/images/icons/fonts; generated Tailwind is ignored. |
 | scripts | Build, environment verification and optional Windows runtime helper. |
 | tests | Storage/recovery, HTTP workflows/output/audit, coordinator races, browser helpers, canonical vectors, stubbed AI, telemetry, forced drain and the explicit owned-process resource runner. |
-| docs and .github/workflows | App-owned status and setup CI; remote CI results require an actual run. |
+| docs and .github/workflows | App-owned status and setup CI; the Windows/Ubuntu run is recorded in docs/STATUS.md. |
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Hosted origins, cookies, TLS/proxy settings and persistence remain deployment work; there is no production identity, medical safety or compliance guarantee.
 

@@ -202,7 +202,7 @@ let languageCode='en',languageObserver;
 try {if(sessionStorage.getItem('vaultmed-interface-language')==='hi') languageCode='hi';} catch {}
 export function interfaceLanguage() {return languageCode;}
 const hindiUI={
-  'Account':'खाता','Patients':'मरीज़','Patient list':'मरीज़ों की सूची','Your visit':'आपकी मुलाक़ात','Fictional demo':'काल्पनिक डेमो','Fictional demo facility':'काल्पनिक डेमो सुविधा',
+  'Account':'खाता','Main navigation':'मुख्य नेविगेशन','Patients':'मरीज़','Patient list':'मरीज़ों की सूची','Your visit':'आपकी मुलाक़ात','Fictional demo':'काल्पनिक डेमो','Fictional demo facility':'काल्पनिक डेमो सुविधा',
   'Language':'भाषा','Language: English':'भाषा: हिन्दी','Help':'सहायता','Sign out':'साइन आउट','Sign in':'साइन इन','Go to sign in':'साइन इन करें','Sign in to continue':'आगे बढ़ने के लिए साइन इन करें',
   'Choose the interface language. Clinical records keep their original wording.':'इंटरफ़ेस की भाषा चुनें। चिकित्सा रिकॉर्ड अपने मूल शब्दों में रहेंगे।',
   'Ask a member of hospital staff if you need help using this page.':'इस पेज का उपयोग करने में सहायता के लिए अस्पताल के कर्मचारी से पूछें।','For urgent care, speak to qualified staff now.':'तत्काल देखभाल के लिए अभी योग्य कर्मचारी से बात करें।',
@@ -248,6 +248,7 @@ const hindiUI={
   'Use optional text interpretation (six topics only)':'वैकल्पिक पाठ व्याख्या उपयोग करें (केवल छह विषय)','Consultation brief proposal':'परामर्श सार का प्रस्ताव','Use proposal as visit note':'प्रस्ताव को मुलाक़ात के नोट में उपयोग करें',
 };
 const originalUI=new WeakMap();
+const originalAttributes=new WeakMap(),translatedAttributes=['aria-label','placeholder','title'];
 const clinicalRegions='[translate="no"],script,style,textarea,#allergies,#answer,#history-groups,#medication-items,#other-items,#review-content,#source-content,#summary-content,#print-content,#encounter-print,#token-print,.patient-name,#patient-name,#assisted-patient';
 function uiTranslation(text) {
   if(languageCode==='en') return text;
@@ -258,6 +259,17 @@ function uiTranslation(text) {
   return text;
 }
 function translateTree(root) {
+  const attributes=element=>{
+    if(element.closest(clinicalRegions)) return;
+    let originals=originalAttributes.get(element);
+    if(!originals) {originals={};originalAttributes.set(element,originals);}
+    for(const name of translatedAttributes) {
+      if(!element.hasAttribute(name)) {delete originals[name];continue;}
+      const text=element.getAttribute(name),prior=originals[name],original=prior && text===prior.translated?prior.original:text;
+      const translated=uiTranslation(original);originals[name]={original,translated};
+      if(text!==translated) element.setAttribute(name,translated);
+    }
+  };
   const visit=textNode=>{
     if(textNode.parentElement?.closest(clinicalRegions)) return;
     const text=textNode.nodeValue,prior=originalUI.get(textNode),original=prior && text===prior.translated?prior.original:text;
@@ -267,13 +279,15 @@ function translateTree(root) {
   if(root.nodeType===Node.TEXT_NODE) visit(root);
   else if(root.nodeType===Node.ELEMENT_NODE || root.nodeType===Node.DOCUMENT_FRAGMENT_NODE) {
     if(root.nodeType===Node.ELEMENT_NODE && root.closest(clinicalRegions)) return;
-    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);while(walker.nextNode()) visit(walker.currentNode);
+    if(root.nodeType===Node.ELEMENT_NODE) attributes(root);
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);
+    while(walker.nextNode()) {if(walker.currentNode.nodeType===Node.TEXT_NODE) visit(walker.currentNode);else attributes(walker.currentNode);}
   }
 }
 function initializeLanguage() {
   if(!languageObserver) {
-    languageObserver=new MutationObserver(records=>{for(const record of records) {if(record.type==='characterData') translateTree(record.target);else for(const child of record.addedNodes) translateTree(child);}});
-    languageObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+    languageObserver=new MutationObserver(records=>{for(const record of records) {if(record.type==='characterData' || record.type==='attributes') translateTree(record.target);else for(const child of record.addedNodes) translateTree(child);}});
+    languageObserver.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:translatedAttributes});
   }
   document.documentElement.lang=languageCode;translateTree(document.body);
 }

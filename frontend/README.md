@@ -57,10 +57,12 @@ No timer or animation can establish a successful mutation or failed save.
 `mountHeader` renders the provisional identity and appropriate provider/patient
 frame. Pass the authenticated account label/role and a real sign-out callback from
 the page controller when integrated. Header labels do not establish a session.
-Login, Patients and Clinical Encounter now use the session/API helpers. Patient
-Visit remains a presentation shell and does not yet display protected content.
-Language/Help are local dialogs. English is available; Hindi translation is not
-implemented. Bundled Devanagari fonts alone do not establish language support.
+Login, Patients, Clinical Encounter and Patient Visit use the session/API helpers.
+Language/Help are local dialogs. English and Hindi interface labels are available
+for the main workflows. Unmapped copy falls back to English; clinical notes,
+reviewed summaries and source records retain their original wording. Translation
+and comprehension still need representative user review. Only the interface-
+language preference is stored in sessionStorage; clinical data is never stored there.
 
 Patient surfaces use `patient-surface`: 18px scalable body, at least 48px action
 targets and 56px prominent buttons. Keep consent choices equally prominent.
@@ -94,10 +96,10 @@ its original key/body in page memory and blocks new queue actions until checked;
 keep the page open for reconciliation. Sign-out hides private content immediately
 and reconciles its own original logout command independently.
 
-Remaining: Patient Visit consent and reviewed summary, assisted consent,
-token-slip/authorized-summary printing, existing-patient
-discovery/linking and complete translations. Manual registration currently creates
-a local patient/visit without enrolling an account. Transfer is explained as
+Patient Visit consent and reviewed summary, assisted consent, token-slip and
+authorized-summary printing, and existing-patient reference linking are connected.
+Manual registration creates a local patient/visit without enrolling an account.
+Authenticated name search remains unavailable. Transfer is explained as
 unavailable: no destination-room catalogue/current target versions are supplied
 by the current API. No endpoint, room label, queue success or patient fixture is
 invented by the frontend. There is no additional dashboard or component framework.
@@ -397,10 +399,81 @@ clock option and then a clock preceding initialization; those runs failed and ar
 not passes. Corrected final runs passed. Kaspersky host-injected requests retain
 previous resource-isolation limitations; no accessibility-conformance claim.
 
-Remaining frontend scope: staff-assisted consent and fuller intake/linking, token
-printing, Hindi translation, representative comprehension/accessibility checks and
-hosted verification. A prior-visit summary catalogue is not exposed by the current
+At that milestone, remaining frontend scope included staff assistance, reference
+linking, token printing and Hindi interface labels; the completion section below
+supersedes that list. Representative comprehension/accessibility checks and hosted
+verification remain pending. A prior-visit summary catalogue is not exposed by the current
 own-visit API; this page uses the latest encounter and does not invent a catalogue.
 No additional core page or backend endpoint was created.
 
 A separate browser download check saved and parsed both JSON files in an isolated temporary profile: the own complete audit dossier with its checksum and the Composition-first local FHIR document Bundle. The temporary files were removed during cleanup. Unchanged recovery notices also retain their existing button to preserve keyboard focus across metadata polls.
+
+## Frontend completion and patient layout — 25 October 2026
+
+- patient-visit/index.html, patient-visit.css and patient-visit.js retain the approved
+  request and sharing/summary compositions with a .85 text scale, aligned header
+  and content widths, tighter section spacing, equal Allow/Deny controls, a sage
+  sharing panel and a bordered reviewed-summary card. Empty states explain the
+  actual absence of sharing or committed output. Successful choice notices clear
+  after an authoritative metadata refresh. Print is the main loaded-summary action;
+  Refresh remains available. Dates, names, scopes and expiry come from actual data.
+- patients/index.html, patients.js and patients.css add existing-reference intake,
+  token printing and staff-assisted choices. Existing intake submits patient_id
+  without demographic merging or a fabricated name-search result. The printed slip
+  contains the token/room and actual sample step-free guidance, with staff fallback
+  and a not-surveyed label; it contains no clinical history. Assistance is available
+  only to permitted staff for the checked-in current patient. It displays actual
+  requests/scopes/deadlines, requires confirmation of the patient's presence,
+  checked visit details and actual choice, and submits versioned ASSISTED_QR
+  Allow/Deny/Ask Why/revoke commands. The printed reference supplies no authority.
+  Uncertain results use the existing immutable same-key reconciliation flow.
+- shared/ui.js implements the English/Hindi interface preference, including mapped
+  accessibility labels, placeholders and titles, with dynamic content support and
+  an English round trip. Protected source/record regions and input values are
+  excluded. The preference does not select an actor, grant access or translate
+  clinical evidence. Native branded selects, checkboxes and dialogs remain in use.
+- encounter/encounter.js and encounter.css add current-grant reviewed printing and
+  a real Composition-first JSON download. Each read rechecks the existing server
+  endpoint and rejects stale page/access responses. Optional question interpretation
+  is unchecked initially. The notes-only brief requires an explicit action, displays
+  generation/source quotes as a proposal, and offers a deliberate Apply action that
+  changes only the unsaved visit note. Save, exact review and commit remain separate;
+  generated clinical items are never added automatically. No browser provider key,
+  SDK, automatic provider request or new backend endpoint was added.
+
+The existing preview patient-a had no active grant, pending request or committed
+summary when diagnosed. That state is truthful. To see the populated design, an
+authenticated clinician requests sharing, the patient or permitted independent
+staff records the patient's choice, and the clinician reviews and commits the
+visit. The patient then explicitly checks the reviewed summary. No working preview
+consent or clinical record was fabricated to populate screenshots. The old mockup's
+two-minute copy remains superseded by the actual session-capped 900-second policy.
+
+Validation: Node 24.22.1 / SQLite 3.53.4 environment checks and the public build
+passed. npm test recorded 169 total, 164 passed, five TODOs and zero failures,
+skips or cancellations (46,181.4284 ms). Temporary real-HTTP/Chrome checks passed
+four additional grouped workflows: staff Ask Why/clarification/Allow/revoke with
+required assistance and lost-response reconciliation to one grant; existing-reference
+intake and history-free sample token printing; English/Hindi visible/accessibility
+label round trips with original clinical text preserved and disabled AI fallback;
+and refreshed clinician print plus a natively saved/parsed FHIR JSON document.
+The six Patient Visit scenario groups also passed against the compact layout,
+including own-summary access after revocation/closure, delayed response clearing,
+300/900-second server boundaries and session expiry. Screenshots were inspected at
+desktop and mobile sizes; layout checks covered 1440/853/390/320px. Chrome's actual
+font report confirmed custom IBM Plex Sans regular and semibold faces. Printing
+was intercepted for content/CSS checks; physical/OS print behavior was not verified.
+
+These browser checks use disposable fictional databases/profiles. Kaspersky injected
+its resource host into the local browser, so they do not establish complete resource
+isolation. They also do not establish accessibility conformance, translation quality,
+actual oral-choice verification, hosting behavior or general AI quality. No live
+provider request was used for frontend verification. Official FHIR validation
+remains NOT_RUN. Existing backend acceptance TODOs remain unchanged.
+
+Remaining dependencies: authenticated patient discovery, an authoritative transfer
+destination/version catalogue and a prior-visit catalogue are absent from the current
+API. The frontend does not invent those results. Hosted cookie/TLS behavior and
+representative accessibility/comprehension review require separate verification.
+Backend code, dependencies, private AI configuration and working clinical contents
+were preserved throughout this frontend work.

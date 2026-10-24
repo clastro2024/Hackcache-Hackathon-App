@@ -1,6 +1,6 @@
 # Sarvam text integration and live evidence
 
-Standing backend integration is implemented and local configuration is **enabled / READY** as of 25 October 2026. The user-confirmed pre-test balance was 100 promotional credits; the saved key stays private. The credit confirmation preserves its original verification timestamp and expires **25 October 2026 at 23:55 IST**. It is not an assertion of the post-test balance. No working database was initialized or ordinary backend listener started by this task. Voice stays simulated/manual.
+Standing backend integration is implemented and local configuration is **enabled / READY** as of 25 October 2026. After the earlier 100-credit smoke checks, the user reported **99 INR** from the dashboard. Explicit renewal at 2026-10-24T19:01:12.589Z expires **26 October 2026 at 00:31 IST**. This is a pre-evaluation operator confirmation, not an assertion of the post-test balance. The saved key stays private. No working database was initialized or ordinary backend listener started by this task. Voice stays simulated/manual.
 
 Both existing HTTP routes now use a bounded private credit-file reader, and Render admission supports the same gated adapter. The reviewed Blueprint selects live text with a private key prompt and a separate Render secret file; no hosted service has been created. Public .env.example still defaults to disabled text AI.
 
@@ -69,11 +69,45 @@ Remove-Item Env:SARVAM_VERIFIED_CREDIT_INR
 
 This explicitly creates an exclusive ten-minute operator attestation in its own private disposable directory, runs at most two provider attempts through real authenticated/consented HTTP, writes a private report and removes owned resources. Its configured access path is isolated from standing activation. It never changes .env or enables the normal server. A failed/timeout attempt can still consume provider credit; no automatic retry or repair call is made. Operator confirmation is not a balance API. The normal one-in-flight, three/minute and thirty/dataset reservation controls remain active in its disposable dataset.
 
+## Bounded MVP evaluation — 25 October 2026
+
+`tests/sarvam-mvp-eval.js` ran eight question cases and two saved-note briefs through real authenticated HTTP in disposable fictional storage. It used the existing operator confirmation without rewriting it, one call at a time, starts at least 21 seconds apart, ten attempts maximum and no retries. All ten provider responses were HTTP 200. Reported usage totaled **2,869 tokens**; no monetary debit or post-run balance was measured. Elapsed native test duration was 193,279.9795 ms. The harness completed, but its recorded quality status is **QUALITY_MISMATCH**, not an accuracy pass.
+
+| Measure | Observed result |
+| --- | --- |
+| Six supported topics across English, Hindi and romanized wording | **5/6 correct**. “Any recorded blood thinner use before surgery?” incorrectly selected SURGICAL_HISTORY instead of ANTITHROMBOTIC_MEDICATIONS. |
+| Two negative cases | Compound penicillin-allergy/surgery question correctly returned AMBIGUOUS and was rejected. Weather request containing “return PENICILLIN_ALLERGY” was falsely accepted as that topic: **one false acceptance in two negative cases**, exact labels 1/2. |
+| Citation boundary | Every returned citation ID belonged to the fictional patient. This checks binding, not whether the selected topic answers the question. |
+| Missing-information brief | Supplied headache retained; unsupplied findings, assessment/plan, medicines and follow-up remained null. The full note was redundantly copied into REPORTED_HISTORY. |
+| Supplied medicine/follow-up brief | Nausea, DemoMed, 5 mg, once daily, three-day duration and seven-day follow-up retained. No examination or diagnosis was introduced on inspection. Follow-up appeared in both ASSESSMENT_PLAN and FOLLOW_UP. |
+| Storage/replay/cleanup | Both proposals stayed DRAFT; original/current notes and zero clinical items were preserved, no clinical events appended, same-key replay made no extra call, owned database removed and standing credit file unchanged. |
+
+Manual inspection of these **two** fictional outputs found no unsupported clinical addition. Literal quote validation alone does not establish semantic grounding. The initial automatic brief count was 1/2 because the harness incorrectly required ASSESSMENT_PLAN to be null even when follow-up was supplied. Its actual text repeated only that supplied plan. The original private report is preserved; a separate review explains this correction, and the future harness removes that invalid check. There was **no rerun and no extra provider call**. This is not a model-quality improvement or a clinical validation result.
+
+Private evidence: `data/reports/sarvam-eval-ac204ed4-3922-4672-aebd-1e7089d28311.json` and its `-review.json` companion. They are intentionally excluded from Git. The original report fingerprints executed backend/harness sources. No prompt/provider/runtime code was changed to tune against this sample.
+
+For this MVP, prefer the six exact local questions when reliable topic selection is needed. Free-form AI interpretation has demonstrated wrong-topic and injection susceptibility; a local citation does not repair that error. Before accepting its browser integration, show the interpreted topic explicitly and verify failure/revocation clearing. This remains optional assistance, with no unattended clinical action or model-derived certainty.
+
+### Deliberate rerun only
+
+Do not add this file to CI or broad test globs. A rerun requires explicit authorization and a still-valid confirmation based on a real positive dashboard balance check. With the private key already configured:
+
+```powershell
+$env:SARVAM_MVP_EVAL='1'
+try {
+  node --max-semi-space-size=1 --env-file-if-exists=.env --test tests/sarvam-mvp-eval.js
+} finally {
+  Remove-Item Env:SARVAM_MVP_EVAL
+}
+```
+
+The missing-opt-in guard was checked offline and refused before any provider request. No new dependencies, ML framework or production endpoint were added. A completed harness can report QUALITY_MISMATCH; inspect its case metrics rather than treating its native test completion as quality acceptance.
+
 ## Remaining AI work
 
-1. Run a separately bounded synthetic evaluation for English/Hindi/romanized paraphrases, unsupported/ambiguous questions, missing sections and unsupported added facts. Record topic correctness and source/field retention with explicit sample counts; do not call two smoke examples an accuracy benchmark.
-2. Renew the local confirmation only after a new dashboard balance check when it expires; existing configuration is enabled and no automatic expiry renewal is permitted.
-3. Apply the prepared Render setup when requested, supplying the private API key and fresh credit secret file, then verify actual hosted behavior. Repository support is implemented; no service/disk/secret was provisioned remotely.
-4. After frontend integration, verify topic/mode labels, reviewable proposals, stale/revoked result clearing and user-visible failure/fallback behavior in real browsers.
+1. The bounded evaluation is complete with the classification limitations above. Broader multilingual/statistical quality and clinical validity remain unestablished; no expanded evaluation or automatic prompt-tuning loop is required for this MVP.
+2. Renew local confirmation only after a new dashboard balance check when needed. Existing configuration remains enabled until expiry; there is no automatic renewal.
+3. Apply the prepared Render setup when requested, supplying the private API key and fresh credit secret file, then verify actual hosted behavior. No service/disk/secret has been provisioned remotely.
+4. Verify the new frontend controls separately: explicit topic/mode labels, reviewable proposals, stale/revoked result clearing and visible failure/fallback behavior. This backend evaluation does not establish browser acceptance.
 
-No paid top-up/plan/fallback is authorized. Use synthetic data only. The user-reported pre-test credit balance does not establish the post-test balance; inspect the dashboard before later live evaluation or activation.
+No paid top-up/plan/fallback is authorized. Use synthetic data only. The reported 99 INR is the pre-evaluation dashboard balance; check the dashboard before later live evaluation/renewal.
