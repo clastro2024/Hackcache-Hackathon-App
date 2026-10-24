@@ -58,3 +58,5 @@
 @media (max-width: 55rem) { .encounter-grid { grid-template-columns: minmax(0, 1fr); } .context-access { margin-inline-start: 0; flex-basis: 100%; } .notes-pane { min-height: auto; } }
 @media (max-width: 40rem) { .history-pane, .notes-pane { padding: 1rem; } .pane-title { font-size: 1.5rem; } .notes-tools { width: 100%; justify-content: space-between; } .save-actions { width: 100%; } .save-actions .button { flex: 1; } .definition-list { grid-template-columns: 1fr; gap: .25rem; } .definition-list dd { margin-block-end: .5rem; } }
 @media print { .encounter-shell { display: none !important; } }
+@media print { .encounter-shell { display: none !important; } #encounter-print { display: block; } #encounter-print h1 { margin-block-end: 8mm; } #encounter-print p { margin-block: 3mm; } }
+.optional-interpretation { display: flex; align-items: center; gap: .625rem; min-height: 2.75rem; }

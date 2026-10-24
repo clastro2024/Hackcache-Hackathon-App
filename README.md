@@ -2,6 +2,8 @@
 
 Fictional-data OPD prototype for assisted intake, queue/navigation, patient-controlled record access and clinician-reviewed documentation.
 
+**Start here: [run and use the MVP](docs/QUICKSTART.md)** — first initialization, account roles and the end-to-end workflow. Detailed setup and engineering status follow below.
+
 **Current milestone: backend workflows, output and Sarvam integration.** Manual/scripted capture, exact review/commit, cited history, reviewed encounter summaries, local R4 downloads and own-patient audit history/checksums use the backend. Sarvam text routes are integrated, live-checked and locally enabled behind an expiring private credit confirmation. Render supports a private key/credit secret; no hosted deployment is established. Broader AI quality evaluation remains pending; see [AI setup/evidence](docs/AI.md). Official FHIR validation stays NOT_RUN. Frontend work is separate; connected browser flows are not established by API tests. See [implemented API](docs/API.md), [operations](docs/OPERATIONS.md) and [actual evidence/next stages](docs/STATUS.md).
 
 ## Setup

@@ -7,6 +7,8 @@ const roomSelect=get('room'),content=get('queue-content'),rows=get('queue-rows')
 const registration=get('registration'),registrationForm=get('registration-form');
 const decision=get('queue-decision'),decisionForm=get('decision-form');
 const registrationDialog=bindDialog(registration,{dismissible:false}),decisionDialog=bindDialog(decision);
+const assistedDialog=bindDialog(get('assisted-sharing'));
+let assistedPatient=null,assistedStatus=null,assistedReading=false,assistedSignature='';
 let actor=null,roomId=null,snapshot=null,generation=0,timer,reading=false,working=false;
 let pending=null,decisionAction=null,needsSession=true,ended=false,leaving=false,logoutIntent=null;
 let lastRender='',destroyHeader=()=>{},registrationRoom=null,lastOutcome=null;
@@ -49,6 +51,7 @@ function lock() {
     if(blocked) link.removeAttribute('href');else link.href=link.dataset.encounterLink;
   }
   get('pause-queue').disabled=blocked;get('register-patient').disabled=blocked || !canRegister();
+  for(const el of get('assisted-form').querySelectorAll('button,input,textarea')) el.disabled=blocked;
   content.setAttribute('aria-busy',String(working));
 }
 function clearPrivate() {
@@ -56,6 +59,7 @@ function clearPrivate() {
   get('absent-rows').replaceChildren();get('call-next-region').replaceChildren();
   get('last-contact').textContent='';get('service-state').textContent='';
   registrationDialog.close();decisionDialog.close();registrationForm.reset();decisionForm.reset();
+  assistedDialog.close();assistedPatient=null;assistedStatus=null;get('assisted-form').reset();get('assisted-requests').replaceChildren();get('assisted-patient').textContent='';get('assisted-notice').replaceChildren();get('token-print').replaceChildren();
   get('decision-patient').textContent='';get('registration-room').textContent='';decisionAction=null;
   get('command-notice').replaceChildren();lock();
 }
@@ -83,6 +87,8 @@ function moreActions(patient,current) {
   summary.append(node('span','','More actions'),icon('chevron'));
   summary.setAttribute('aria-label',`More actions for token ${patient.public_token}`);
   details.append(summary,actions);
+  actions.append(button('Print token',()=>printToken(patient),{secondary:true}));
+  if(staff() && permitted('consent:assist') && current && patient.checked_in) actions.append(button('Help with sharing choice',()=>openAssisted(patient),{secondary:true}));
   if((staff() && (!current || !patient.checked_in)) || (clinician() && current)) {
     actions.append(button('Withdraw visit',()=>openDecision('withdraw',patient),{danger:true}));
   }
@@ -129,6 +135,7 @@ function renderPatient(patient,current=false) {
   row.append(status,actions);return row;
 }
 function renderQueue(value) {
+  if(assistedPatient && value.current?.encounter_id!==assistedPatient.encounter_id) {assistedDialog.close();assistedPatient=null;assistedStatus=null;get('assisted-requests').replaceChildren();}
   const label=value.label || value.room_id;
   setText(roomSelect.selectedOptions[0],label);
   const service=get('service-state');service.replaceChildren();
@@ -193,6 +200,7 @@ async function poll() {
     if(value.room_id!==selected || !Number.isSafeInteger(value.version) || !Array.isArray(value.waiting) || !Array.isArray(value.absent)) throw new Error('Invalid room snapshot');
     if(value.version<(versions.get(selected) ?? -1)) return;
     versions.set(selected,value.version);snapshot=value;get('connection-notice').replaceChildren();renderQueue(value);
+    if(get('assisted-sharing').open && !assistedReading && !pending) void loadAssisted();
     if(pending && !working) showPending();
     else if(lastOutcome && !working) notice('command-notice',lastOutcome.title,lastOutcome.message,lastOutcome.tone);
   } catch(error) {
@@ -222,7 +230,7 @@ async function executePending() {
     const result=await api.command(command.intent);
     if(pending!==command || ended || leaving) return;
     pending=null;
-    const title=result.changed===false?'No queue change':`${command.label} confirmed`;
+    const title=result.changed===false?(command.kind==='consent'?'Sharing status unchanged':'No queue change'):`${command.label} confirmed`;
     const message=command.kind==='registration'?result.message || `Token ${result.public_token}. Ask staff for directions to the room.`:
       result.message || 'The page is checking the current patient list.';
     lastOutcome={title,message,tone:result.changed===false?'neutral':'success'};
@@ -246,6 +254,62 @@ async function executePending() {
     snapshot=null;working=false;lock();
     if(!ended && !leaving) {needsSession=true;void poll();}
   }
+}
+
+async function printToken(patient) {
+  if(!snapshot || working || pending || ended || leaving) return;
+  const epoch=generation,room=roomId,label=snapshot.label,region=get('token-print');
+  notice('command-notice','Preparing token…','Loading sample guidance for the printed slip.','info');
+  let route=null;
+  try {route=await api.read('/navigation/route',{origin:'entrance',destination:room,accessibility:'STEP_FREE',language:document.documentElement.lang==='hi'?'hi':'en'});} catch { /* A plain token and staff guidance remain useful without a sample route. */ }
+  if(epoch!==generation || ended || leaving || document.hidden || !snapshot) return;
+  region.replaceChildren(node('p','','VaultMed · Fictional visit token'),node('h1','numeric',patient.public_token),node('p','patient-name',patient.display_name),node('h2','',label));
+  if(route?.status==='ROUTE_AVAILABLE') {const list=node('ol');for(const step of route.steps) list.append(node('li','',step.instruction));region.append(node('h2','','Sample step-free directions from entrance'),list);}
+  region.append(node('p','',route?.message || 'Ask hospital staff for directions and assistance.'),node('p','field-help','Fictional sample map, not surveyed. This token is a visit reference, not authentication or permission to read records.'),node('p','','For urgent care, speak to qualified staff now.'));
+  window.print();get('command-notice').replaceChildren();
+}
+window.addEventListener('afterprint',()=>get('token-print').replaceChildren());
+function openAssisted(patient) {
+  if(!staff() || !permitted('consent:assist') || !snapshot || pending || working || !patient.checked_in) return;
+  assistedPatient=patient;assistedStatus=null;assistedSignature='';get('assisted-form').reset();get('assisted-requests').replaceChildren();
+  setText(get('assisted-patient'),`${patient.public_token} · ${patient.display_name}`);assistedDialog.open();void loadAssisted();
+}
+async function loadAssisted() {
+  if(!assistedPatient || assistedReading || !get('assisted-sharing').open || pending || working) return;
+  assistedReading=true;const patient=assistedPatient,epoch=generation,started=performance.now();
+  try {
+    const status=await api.read(`/encounters/${patient.encounter_id}/allowance/status`);
+    if(epoch!==generation || assistedPatient!==patient || !get('assisted-sharing').open) return;
+    if(status.patient_id!==patient.patient_id || status.encounter_id!==patient.encounter_id) throw new Error('Wrong assistance context');
+    assistedStatus=status;
+    const requests=status.pending_requests,grants=status.active_grants;
+    const signature=JSON.stringify([requests.map(({remaining_seconds,maximum_grant_seconds,...rest})=>rest),grants.map(({expires_in_seconds,...rest})=>rest)]);
+    if(signature===assistedSignature) return;assistedSignature=signature;get('assisted-notice').replaceChildren();
+    const region=get('assisted-requests');region.replaceChildren();
+    const labels={'triage:read':'Recorded history','vault:query':'Visit questions','affirmation:run':'Optional checks','summary:export':'Reviewed summary','vault:read':'Detailed recorded history'};
+    for(const request of requests) {
+      const card=node('section','assist-request stack');card.append(node('h3','',status.clinician.display_name),node('p','',status.facility.display_name),node('p','',request.explanation),node('p','',request.scopes.map(scope=>labels[scope] ?? scope).join(' · ')),node('p','field-help',`Up to ${Math.min(15,Math.floor(request.maximum_grant_seconds/60))} minutes for this visit. Request ends ${new Date(request.expires_at).toLocaleTimeString()}.`));
+      const label=node('label','field-label','Question for the clinician (required for Ask why)'),note=node('textarea','field-control'),actions=node('div','decision-buttons');note.maxLength=500;note.rows=2;note.id=`assist-note-${region.childElementCount}`;label.htmlFor=note.id;card.append(label,note,actions);
+      const deadline=started+Math.max(0,Date.parse(request.expires_at)-Date.parse(status.server_time));
+      for(const [text,action] of [['Allow','ALLOW'],['Deny','DENY'],['Ask why','ASK_WHY']]) if(request.allowed_actions.includes(action)) actions.append(button(text,()=>assistedChoice('respond',request,action,note.value,deadline),{secondary:true}));
+      region.append(card);
+    }
+    for(const grant of grants) {
+      const card=node('section','assist-request stack');card.append(node('h3','',grant.mode==='BREAK_GLASS'?'Emergency access (simulated registration)':'Sharing is active'),node('p','',grant.scopes.map(scope=>labels[scope] ?? scope).join(' · ')),node('p','field-help',`Ends ${new Date(grant.expires_at).toLocaleTimeString()}.`));
+      if(grant.allowed_actions.includes('REVOKE')) card.append(button('Stop sharing',()=>assistedChoice('revoke',grant,null,'',started+Math.max(0,Date.parse(grant.expires_at)-Date.parse(status.server_time))),{secondary:true}));region.append(card);
+    }
+    if(!requests.length && !grants.length) region.append(node('p','muted','No sharing request or active grant for this encounter. The clinician must request access first.'));
+  } catch {if(epoch===generation && assistedPatient===patient) {assistedStatus=null;get('assisted-requests').replaceChildren();notice('assisted-notice','Sharing status unavailable','Refresh the patient list and try again.');}}
+  finally {assistedReading=false;lock();}
+}
+function assistedChoice(kind,item,action,note,deadline) {
+  if(!staff() || !permitted('consent:assist') || !assistedStatus || !snapshot || pending || working || performance.now()>=deadline) return;
+  if(!['assist-present','assist-identity','assist-choice'].every(id=>get(id).checked)) {notice('assisted-notice','Confirm the assistance','Confirm that the patient is present, their details were checked and you are recording their actual choice.');return;}
+  if(action==='ASK_WHY' && !note.trim()) {notice('assisted-notice','Enter the patient’s question','Ask the patient what they would like explained.');return;}
+  const assistance={patient_present:true,identity_check_confirmed:true,patient_choice_confirmed:true},body={approval_channel:'ASSISTED_QR',assistance};
+  if(kind==='respond') Object.assign(body,{consent_request_id:item.consent_request_id,expected_request_version:item.request_version,action,...(note.trim()?{note:note.trim()}:{})});
+  else Object.assign(body,{grant_id:item.grant_id,expected_grant_version:item.grant_version});
+  const encounter=assistedPatient.encounter_id;assistedDialog.close();void runCommand(`/encounters/${encounter}/allowance/${kind}`,body,'Patient sharing choice','consent');
 }
 
 function openDecision(kind,patient=null) {
@@ -293,14 +357,16 @@ decisionForm.addEventListener('submit',event=>{
 get('pause-queue').addEventListener('click',()=>openDecision(snapshot?.service_state==='ACTIVE'?'pause':'resume'));
 roomSelect.addEventListener('change',()=>{if(working || pending) return;roomId=roomSelect.value;lastOutcome=null;clearPrivate();void poll();});
 
-function registrationDirty() {return Boolean(registrationForm.elements.display_name.value || registrationForm.elements.date_of_birth.value || registrationForm.elements.language.value!=='en');}
+function registrationDirty() {return Boolean(registrationForm.elements.display_name.value || registrationForm.elements.date_of_birth.value || registrationForm.elements.language.value!=='en' || get('existing-patient').value);}
+function registrationMode() {const existing=get('registration-mode').value==='existing';get('new-patient-fields').hidden=existing;get('existing-patient-field').hidden=!existing;registrationForm.elements.display_name.required=!existing;get('patient-language').closest('.field').hidden=existing;}
+get('registration-mode').addEventListener('change',registrationMode);
 function requestRegistrationClose() {
   if(registrationDirty()) {get('discard-registration').hidden=false;get('keep-editing').focus();}
   else registrationDialog.close();
 }
 get('register-patient').addEventListener('click',()=>{
   if(!snapshot || pending || working || !canRegister()) return;
-  registrationRoom=roomId;registrationForm.reset();get('discard-registration').hidden=true;
+  registrationRoom=roomId;registrationForm.reset();registrationMode();get('discard-registration').hidden=true;setFieldError(get('existing-patient'),get('existing-patient-error'),'');
   for(const [field,errorId] of [['display_name','patient-name-error'],['date_of_birth','patient-dob-error']]) setFieldError(registrationForm.elements[field],get(errorId),'');
   setText(get('registration-room'),snapshot.label);registrationDialog.open();
 });
@@ -314,6 +380,12 @@ get('keep-editing').addEventListener('click',()=>{get('discard-registration').hi
 get('discard-details').addEventListener('click',()=>{registrationForm.reset();registrationDialog.close();});
 registrationForm.addEventListener('submit',event=>{
   event.preventDefault();if(!snapshot || registrationRoom!==roomId || pending || working || !canRegister()) return;
+  if(get('registration-mode').value==='existing') {
+    const field=get('existing-patient'),patient_id=field.value.trim();
+    setFieldError(field,get('existing-patient-error'),/^[A-Za-z0-9_-]{1,128}$/u.test(patient_id)?'':'Enter the existing local patient reference.');
+    if(field.getAttribute('aria-invalid')==='true') {field.focus();return;}
+    registrationDialog.close();registrationForm.reset();void runCommand('/queue/register',{room_id:registrationRoom,intake_mode:'MANUAL',patient_id},'Registration','registration');return;
+  }
   const name=registrationForm.elements.display_name,dob=registrationForm.elements.date_of_birth;
   const date=dob.value,localNow=new Date(),today=`${localNow.getFullYear()}-${String(localNow.getMonth()+1).padStart(2,'0')}-${String(localNow.getDate()).padStart(2,'0')}`;
   const nameError=name.value.trim()?'':'Enter the patient’s name.';
@@ -346,7 +418,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 window.addEventListener('pagehide',()=>{clearTimeout(timer);clearPrivate();api.clear('PAGE_LEFT');});
 window.addEventListener('pageshow',event=>{if(event.persisted) location.reload();});
-for(const close of document.querySelectorAll('#close-registration, #queue-decision .dialog-close')) close.replaceChildren(icon('close'));
+for(const close of document.querySelectorAll('#close-registration, #queue-decision .dialog-close, #assisted-sharing .dialog-close')) close.replaceChildren(icon('close'));
 get('register-patient').prepend(icon('plus'));
 content.addEventListener('keydown',event=>{
   const disclosure=event.target.closest('.row-more[open]');

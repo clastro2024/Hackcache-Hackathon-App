@@ -17,7 +17,7 @@ let allowance=null,history=null,draft=null,items=[],dirty=false,conflict=false,c
 let destroyHeader=()=>{},logoutIntent=null,logoutWorking=false;
 const pending={write:null,history:null,access:null},working=new Set();
 const historyKinds=new Set(['query','check','summary']);
-const laneFor=kind=>['capture','save','review','commit'].includes(kind)?'write':historyKinds.has(kind)?'history':'access';
+const laneFor=kind=>['capture','save','review','commit','brief'].includes(kind)?'write':historyKinds.has(kind)?'history':'access';
 
 function node(tag,className,text) {const el=document.createElement(tag);if(className) el.className=className;if(text!==undefined) setText(el,text);return el;}
 function human(value) {return String(value ?? 'Not recorded').replaceAll('_',' ').toLowerCase().replace(/^./u,c=>c.toUpperCase());}
@@ -49,6 +49,8 @@ function lock() {
   get('ask-question').disabled ||= !hasScope('vault:query');get('optional-check').disabled ||= !hasScope('affirmation:run');
   get('request-access').disabled ||= Boolean(allowance?.active_grants?.length);
   get('show-summary').disabled=!hasScope('summary:export') || Boolean(working.has('history'));
+  for(const id of ['print-reviewed','download-reviewed']) if(get(id)) get(id).disabled=!hasScope('summary:export') || working.has('history');
+  if(get('consultation-brief')) get('consultation-brief').disabled=!ready || committed || Boolean(pending.write);
   get('emergency-access').hidden=!actor?.permissions.includes('emergency:read');
   get('emergency-access').disabled ||= Boolean(allowance?.active_grants?.length);
   get('visit-note').disabled=!writable || pending.write?.kind==='commit';get('assessment').disabled=get('visit-note').disabled;
@@ -74,6 +76,7 @@ function clearHistory() {
   for(const id of ['allergies','history-groups','answer','question-feedback','check-result','source-content']) get(id).replaceChildren();
   get('answer').append(node('p','muted','Ask a supported question to see a sourced answer.'));
   get('question').value='Penicillin allergy history?';get('history-content').hidden=true;dialogs.source.close();
+  document.getElementById('encounter-print')?.replaceChildren();
   get('item-target').replaceChildren();
   // Source-linked edits are protected by the history grant, unlike new-care notes.
   if(items.some(item=>item.change_kind!=='INITIAL') || draft?.ai_proposal?.include_history) {dialogs.item.close();dialogs.review.close();clearNotes();}
@@ -206,6 +209,7 @@ function renderHistory() {
 }
 function renderAnswer(value) {
   const body=get('answer');body.replaceChildren(node('p','field-help',`Question: ${value.question_text}`),node('p','state-label',value.certainty_state?human(value.certainty_state):`${human(value.lookup_status)} · no certainty verdict`),node('p','',value.answer_text));
+  if(value.ai_status) body.append(node('p','field-help',value.generation_mode==='LOCAL_FALLBACK'?'Text interpretation unavailable; the exact local question was used.':'Optional text interpretation selected the topic. The cited evidence and certainty come from the local record rules.'));
   for(const warning of value.warnings || []) body.append(node('p','field-help',warning));
   for(const citation of value.source_citations || []) {
     const fact=value.facts.find(item=>item.event_id===citation.event_id),row=node('div','record-entry');
@@ -268,7 +272,7 @@ function showPending() {
 }
 function errorMessage(error) {
   return ({UNSUPPORTED_QUESTION:'Choose one of the six supported questions. Other wording is not supported by the current local rules.',
-    ASR_MODE_UNAVAILABLE:'Simulated scribe is unavailable. Manual notes remain available.',REVIEW_VALIDATION_FAILED:'Complete the clinical statements and their source details, save the draft, then review again.',
+    ASR_MODE_UNAVAILABLE:'Simulated scribe is unavailable. Manual notes remain available.',AI_UNAVAILABLE:'Optional text assistance is unavailable. Manual notes and exact supported questions remain available.',AI_CONTEXT_CHANGED:'The source note changed. Save the current draft before requesting another proposal.',AI_BUDGET_EXHAUSTED:'The configured text-assistance limit has been reached. Manual care remains available.',REVIEW_VALIDATION_FAILED:'Complete the clinical statements and their source details, save the draft, then review again.',
     DRAFT_VERSION_CONFLICT:'This draft changed on the server. Load the current draft before choosing another save.',STATE_VERSION_CONFLICT:'The source changed. Refresh the history and current draft before continuing.',
     SUMMARY_NOT_COMMITTED:'No reviewed record has been committed for this encounter.',SUMMARY_OUTDATED:'A source statement was corrected or retracted. The earlier summary is no longer available.',
     CLINICAL_INTEGRITY_INVALID:'The clinical source could not be verified. No protected result is being shown.',HISTORY_LOCKED:'History is not shared for this action.',GRANT_ENDED:'History sharing ended. Previously displayed history has been cleared.',
@@ -510,7 +514,7 @@ get('show-summary').addEventListener('click',async()=>{
     if(epoch!==generation || access!==historyEpoch || !hasScope('summary:export')) return;
     setText(get('source-title'),'Reviewed visit summary');const body=get('source-content');body.replaceChildren(node('p','field-help','Fictional record · committed encounter batch only'),node('p','source-copy',value.reviewed_text));
     for(const statement of value.statements || []) body.append(node('p','source-copy',statement.display_text));
-    body.append(node('p','field-help','Official FHIR validation: NOT_RUN. Printing and export controls follow separately.'));dialogs.source.open(get('more-tools').querySelector('summary'));
+    body.append(node('p','field-help','Official FHIR validation: NOT_RUN. This is the committed reviewed encounter batch.'));dialogs.source.open(get('more-tools').querySelector('summary'));
   } catch(error) {if(epoch===generation && !ended) notice('save-feedback','Summary unavailable',errorMessage(error));}
   finally {working.delete('history');lock();}
 });
@@ -520,7 +524,8 @@ get('question-form').addEventListener('submit',async event=>{
   const text=get('question').value.trim();setFieldError(get('question'),get('question-error'),text?'':'Enter a supported question.');
   if(!text) {get('question').focus();return;}
   get('answer').replaceChildren(node('p','muted','Waiting for the answer…'));
-  await command('query','/vault/query',{...contextForClinical(),question_text:text},'Ask record');
+  const interpret=get('interpret-question').checked;
+  await command('query',interpret?'/ai/records/ask':'/vault/query',interpret?{encounter_id:context.encounter_id,question:text}:{...contextForClinical(),question_text:text},'Ask record');
 });
 get('refresh-history').addEventListener('click',()=>{history=null;void loadHistory();});
 get('visit-note').addEventListener('input',markDirty);get('assessment').addEventListener('input',markDirty);
@@ -565,3 +570,56 @@ for(const id of ['ask-question','optional-check']) get(id).dataset.lane='history
 for(const id of ['request-access','emergency-access']) get(id).dataset.lane='access';
 get('add-medicine').prepend(icon('plus'));header();lock();
 if(validContext) void poll();else {ended=true;notice('workspace-notice','Select a current patient','Open the encounter from your permitted patient list.','neutral',{label:'Patient list',onClick:()=>location.replace('../patients/')});}
+
+const encounterPrint=node('section','print-only');encounterPrint.id='encounter-print';encounterPrint.translate=false;document.body.append(encounterPrint);
+async function reviewedOutput(mode) {
+  if(!ready || !hasScope('summary:export') || working.has('history')) return;
+  get('more-tools').open=false;const epoch=generation,access=historyEpoch;working.add('history');lock();
+  notice('save-feedback','Preparing reviewed output…','Checking current sharing and the exact committed batch.','info');
+  try {
+    const value=await api.read(`/encounters/${context.encounter_id}/${mode==='download'?'fhir-export':'summary'}`);
+    if(epoch!==generation || access!==historyEpoch || !hasScope('summary:export') || document.hidden) return;
+    if(mode==='download') {
+      const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/fhir+json'})),link=node('a');
+      link.href=url;link.download=`vaultmed-reviewed-${crypto.randomUUID()}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    } else {
+      encounterPrint.replaceChildren(node('h1','','Reviewed visit summary'),node('p','',value.patient_display_name),node('p','',`Reviewed by ${value.review.reviewer_display_name} · ${new Date(value.review.reviewed_at).toLocaleString()}`),node('p','source-copy',value.reviewed_text));
+      for(const statement of value.statements) encounterPrint.append(node('p','source-copy',statement.display_text));
+      for(const warning of value.warnings) encounterPrint.append(node('p','field-help',warning));window.print();
+    }
+    notice('save-feedback',mode==='download'?'Download prepared':'Print summary prepared','The output covers the committed reviewed batch. Official FHIR validation has not been run.','info');
+  } catch(error) {if(epoch===generation && !ended) notice('save-feedback','Reviewed output unavailable',errorMessage(error));}
+  finally {working.delete('history');lock();}
+}
+for(const [id,label,mode] of [['print-reviewed','Print reviewed summary','print'],['download-reviewed','Download reviewed record','download']]) {
+  const control=node('button','menu-action',label);control.id=id;control.type='button';control.addEventListener('click',()=>reviewedOutput(mode));get('more-tools').querySelector('.tool-menu').append(control);
+}
+window.addEventListener('afterprint',()=>encounterPrint.replaceChildren());
+
+const interpretationLabel=node('label','optional-interpretation field-help'),interpretation=node('input');interpretation.type='checkbox';interpretation.id='interpret-question';
+interpretationLabel.append(interpretation,node('span','','Use optional text interpretation (six topics only)'));get('question-form').append(interpretationLabel);
+function showBrief(proposal) {
+  const epoch=generation,rev=revision,version=draft.version,region=get('source-content');region.replaceChildren();
+  setText(get('source-title'),'Consultation brief proposal');
+  region.append(node('p','field-help','Optional generated proposal from the saved note only. Check every statement and source before using it. No clinical items are created automatically.'));
+  region.append(node('p','field-help',`${proposal.generation?.provider ?? 'Text adapter'} · ${proposal.generation?.model ?? 'Model recorded by server'} · ${proposal.generation?.generated_at ?? ''}`));
+  const proposed=[];
+  for(const [key,section] of Object.entries(proposal.sections)) {
+    const title=human(key);region.append(node('h3','section-label',title),node('p','source-copy',section.text ?? 'Not supplied in the source note.'));
+    if(section.text) proposed.push(`${title}:\n${section.text}`);
+    for(const quote of section.note_quotes ?? []) region.append(node('p','field-help',`Source quote: ${quote}`));
+  }
+  const apply=textButton('Use proposal as visit note',()=>{
+    if(epoch!==generation || rev!==revision || dirty || draft?.version!==version || !ready || committed || pending.write) {notice('save-feedback','Proposal not applied','The note changed. Review the current saved draft before applying a proposal.');return;}
+    const text=proposed.join('\n\n');if(text.length+get('assessment').value.length+40>8000) {notice('save-feedback','Proposal too long','Edit the proposal manually to fit the note limit.');return;}
+    get('visit-note').value=text;dialogs.source.close();markDirty();
+  });region.append(apply);dialogs.source.open(get('more-tools').querySelector('summary'));
+}
+const briefControl=node('button','menu-action','Consultation brief proposal');briefControl.type='button';briefControl.id='consultation-brief';briefControl.dataset.command='';
+briefControl.addEventListener('click',async()=>{
+  get('more-tools').open=false;if(!ready || committed || pending.write) return;
+  if(!dirty && draft?.ai_proposal && !draft.ai_proposal.include_history) {showBrief(draft.ai_proposal);return;}
+  const epoch=generation;if(!(await saveDraft()) || epoch!==generation || !draft || dirty) return;
+  const rev=revision,result=await command('brief','/ai/consultation/brief',{draft_id:draft.draft_id,expected_draft_version:draft.version,include_history:false},'Prepare consultation brief');
+  if(result && epoch===generation && rev===revision && !dirty && draft?.ai_proposal) showBrief(draft.ai_proposal);
+});get('more-tools').querySelector('.tool-menu').append(briefControl);

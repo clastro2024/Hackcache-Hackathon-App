@@ -1,67 +1,74 @@
-.patient-workspace { max-width: 46rem; padding: 2.25rem 1.5rem 3.5rem; }
-.patient-visit-page .shell-bar, .patient-visit-page .shell-utilities { max-width: 46rem; margin-inline: auto; }
+.patient-visit-page { --ui-text-scale: .85; line-height: 1.55; }
+.patient-workspace { max-width: 44rem; padding: 1.75rem 1.5rem 2.75rem; }
+.patient-visit-page .shell-bar, .patient-visit-page .shell-utilities { max-width: 44rem; margin-inline: auto; }
 .patient-visit-page .shell-bar { padding: 1rem 1.5rem; }
 .patient-visit-page .shell-utilities { padding: .875rem 1.5rem; }
 .patient-visit-page .demo-label { display: none; }
 .patient-visit-page .account-trigger > .icon:first-child { display: none; }
-.patient-visit-page .account-trigger { font-size: 1.125rem; }
-.patient-visit-page .brand { font-size: 2rem; }
+.patient-visit-page .account-trigger { font-size: calc(1.125rem * var(--ui-text-scale, 1)); }
+.patient-visit-page .brand { font-size: calc(2rem * var(--ui-text-scale, 1)); }
 .patient-visit-page .account-note { padding: .75rem; }
-.visit-heading { margin-block-end: 2rem; }
-.patient-visit-page .visit-heading h1 { font-size: 2.5rem; line-height: 1.2; margin-block-end: .625rem; }
-.visit-patient { font-size: 1.5rem; line-height: 1.4; margin-block-end: .375rem; }
+.visit-heading { margin-block-end: 1.5rem; }
+.patient-visit-page .visit-heading h1 { font-size: calc(2.5rem * var(--ui-text-scale, 1)); line-height: 1.2; margin-block-end: .625rem; }
+.visit-patient { font-size: calc(1.5rem * var(--ui-text-scale, 1)); line-height: 1.4; margin-block-end: .375rem; }
 .visit-notice:not(:empty) { margin-block-end: 1.5rem; }
 .sharing-region { display: grid; gap: 1.5rem; }
 .sharing-request { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1.75rem; }
-.patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: 1.875rem; line-height: 1.25; }
-.request-clinician { font-size: 1.5rem; line-height: 1.4; margin-block: .875rem .125rem; }
-.request-facts { display: grid; gap: 1.125rem; margin-block: 1.75rem; }
+.patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: calc(1.875rem * var(--ui-text-scale, 1)); line-height: 1.25; }
+.request-clinician { font-size: calc(1.5rem * var(--ui-text-scale, 1)); line-height: 1.4; margin-block: .875rem .125rem; }
+.request-facts { display: grid; gap: 1rem; margin-block: 1.25rem; }
 .request-facts dt { color: var(--color-muted); font-weight: 600; margin-block-end: .25rem; }
 .request-facts dd { margin: 0; }
 .decision-buttons { display: flex; gap: 1rem; }
 .decision-buttons .button { flex: 1; border-color: var(--color-primary); color: var(--color-ink); }
 .ask-why { margin-block-start: .5rem; }
 .ask-why-form { margin-block-start: 1rem; }
-.request-deadline { margin-block-start: 1rem; font-size: .9375rem; color: var(--color-muted); }
+.request-deadline { margin-block-start: 1rem; font-size: calc(.9375rem * var(--ui-text-scale, 1)); color: var(--color-muted); }
 .sharing-active { display: grid; grid-template-columns: 2.75rem minmax(0,1fr) auto; align-items: center; gap: .875rem; padding: 1.25rem; border-radius: var(--radius-md); background: var(--color-tint); }
 .sharing-mark { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--color-primary); color: var(--color-on-primary); }
-.sharing-active h2 { font-size: 1.125rem; line-height: 1.5; }
-.sharing-active .button { min-height: 3rem; font-size: 1rem; padding-inline: .875rem; }
-.sharing-scopes { margin-block-start: .375rem; font-size: 1rem; }
+.sharing-active h2 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); line-height: 1.4; }
+.sharing-active .button { min-height: 3rem; font-size: calc(1rem * var(--ui-text-scale, 1)); padding-inline: .875rem; }
+.sharing-scopes { margin-block-start: .375rem; font-size: calc(1rem * var(--ui-text-scale, 1)); }
 .sharing-empty { border-block-start: 1px solid var(--color-border-subtle); padding-block: 1.5rem 0; }
 .sharing-empty h2 { margin-block-end: .5rem; }
-.visit-summary { margin-block-start: 2rem; padding-block-start: 1.75rem; border-block-start: 1px solid var(--color-border-subtle); }
+.visit-summary { margin-block-start: 1.5rem; padding-block-start: 1.5rem; border-block-start: 1px solid var(--color-border-subtle); }
 .visit-summary h2 { margin-block-end: 1rem; }
 .visit-summary.has-summary { border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); padding: 1.5rem; }
 .summary-review { color: var(--color-muted); }
 .summary-section { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1.25rem; margin-block-start: 1.25rem; }
-.summary-section h3 { font-size: 1.375rem; margin-block-end: .625rem; }
+.summary-section h3 { font-size: calc(1.375rem * var(--ui-text-scale, 1)); margin-block-end: .625rem; }
 .summary-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
 .summary-actions { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-block-start: 1rem; }
 .summary-actions .text-link { gap: .625rem; font-weight: 500; }
-.summary-independence { margin-block: 1.5rem; color: var(--color-muted); font-size: 1rem; }
+.summary-actions #print-summary { flex-direction: row-reverse; }
+.summary-actions:has(#print-summary:not([hidden])) { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: .75rem; }
+.summary-actions:has(#print-summary:not([hidden])) #view-summary { order: 1; margin-inline-start: auto; color: var(--color-muted); }
+.sharing-empty { border-radius: var(--radius-md); padding: 1.125rem; background: var(--color-tint); border: 0; }
+.sharing-empty h2 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); }
+.sharing-empty p { max-width: 52ch; }
+.summary-independence { margin-block: 1.5rem; color: var(--color-muted); font-size: calc(1rem * var(--ui-text-scale, 1)); }
 .summary-details { margin-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1rem; }
 .summary-details summary, .record-details > summary { min-height: 3rem; padding-block: .5rem; color: var(--color-primary); cursor: pointer; }
-.summary-details > .stack { margin-block-start: .75rem; font-size: 1rem; }
+.summary-details > .stack { margin-block-start: .75rem; font-size: calc(1rem * var(--ui-text-scale, 1)); }
 .record-details { margin-block-start: 2rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1rem; }
 .record-details > .stack { margin-block-start: 1rem; }
 .support-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
-.support-actions .button, .support-actions .text-link { font-size: 1rem; }
+.support-actions .button, .support-actions .text-link { font-size: calc(1rem * var(--ui-text-scale, 1)); }
 .audit-rows { list-style: none; padding: 0; margin: 0; }
 .audit-rows li { border-block-end: 1px solid var(--color-border-subtle); padding-block: 1rem; }
-.audit-rows p { font-size: 1rem; }
-.audit-rows time { color: var(--color-muted); font-size: .9375rem; }
-@media (min-width: 70rem) { .patient-workspace { padding-block-start: 3rem; } }
+.audit-rows p { font-size: calc(1rem * var(--ui-text-scale, 1)); }
+.audit-rows time { color: var(--color-muted); font-size: calc(.9375rem * var(--ui-text-scale, 1)); }
+@media (min-width: 70rem) { .patient-workspace { padding-block-start: 2rem; } }
 @media (max-width: 40rem) {
   .patient-workspace { padding: 1.75rem 1.25rem 2.5rem; }
   .patient-visit-page .shell-bar, .patient-visit-page .shell-utilities { padding-inline: 1.25rem; }
   .patient-visit-page .shell-bar { flex-wrap: nowrap; }
-  .patient-visit-page .brand { font-size: 1.625rem; }
-  .patient-visit-page .account-trigger { font-size: 1rem; padding-inline: .25rem; }
+  .patient-visit-page .brand { font-size: calc(1.625rem * var(--ui-text-scale, 1)); }
+  .patient-visit-page .account-trigger { font-size: calc(1rem * var(--ui-text-scale, 1)); padding-inline: .25rem; }
   .patient-visit-page .shell-account { margin-inline-start: 0; }
-  .patient-visit-page .visit-heading h1 { font-size: 2.125rem; }
-  .patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: 1.625rem; }
-  .request-clinician, .visit-patient { font-size: 1.375rem; }
+  .patient-visit-page .visit-heading h1 { font-size: calc(2.125rem * var(--ui-text-scale, 1)); }
+  .patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: calc(1.625rem * var(--ui-text-scale, 1)); }
+  .request-clinician, .visit-patient { font-size: calc(1.375rem * var(--ui-text-scale, 1)); }
   .sharing-active { grid-template-columns: 2.5rem minmax(0,1fr); padding: 1rem; }
   .sharing-active > .button { grid-column: 2; justify-self: start; }
   .visit-summary.has-summary { padding: 1.125rem; }

@@ -29,7 +29,7 @@ function lock() {
 function clearSummary() {
   summary=null;get('summary-content').replaceChildren();get('summary-content').hidden=true;
   get('print-content').replaceChildren();get('print-summary').hidden=true;get('visit-summary').classList.remove('has-summary');
-  setText(get('view-summary'),'View reviewed summary');get('summary-notice').replaceChildren(node('p','muted','Your reviewed summary will appear here.'));
+  setText(get('view-summary'),'Check for reviewed summary');get('summary-notice').replaceChildren(node('p','muted','After your clinician reviews and saves this visit, you can view your summary here.'));
 }
 function clearPrivate() {
   generation+=1;visit=null;allowance=null;lastSharing='';clearTimeout(expiryTimer);
@@ -110,7 +110,7 @@ function renderSharing() {
     if(!parts.length) {
       const section=node('div','sharing-empty'),state=(allowance?.active_grants?.length || allowance?.pending_requests?.length)?'EXPIRED':allowance?.grant?.grant_state || allowance?.request?.request_state;
       const label=state==='DENIED'?'You chose not to share':state==='REVOKED'?'Sharing stopped':['EXPIRED','ENDED','CANCELLED'].includes(state)?'Sharing has ended':'No sharing request right now';
-      section.append(node('h2','',label),node('p','muted',visit?'A clinician’s request will appear here when it is available.':'No visit is linked to this account yet. Ask hospital staff for help.'));parts.push(section);
+      section.append(node('h2','',label),node('p','muted',visit?'There is no active sharing permission for this visit. If your clinician requests access, you can Allow, Deny or Ask why here.':'No visit is linked to this account yet. Ask hospital staff for help.'));parts.push(section);
     }
     get('sharing').replaceChildren(...parts);
     if(focused) {get('sharing').tabIndex=-1;get('sharing').focus();}
@@ -146,7 +146,9 @@ async function poll() {
     }
     get('patient-content').hidden=false;get('visit-notice').replaceChildren();setText(get('patient-name'),actor.display_name);
     setText(get('visit-reference'),`${next?.public_token?`Visit ${next.public_token} · `:''}Fictional demo`);
-    renderSharing();if(pending) pendingNotice();lock();
+    renderSharing();if(pending) pendingNotice();
+    else if(!working && get('choice-notice').querySelector('.notice--success')) get('choice-notice').replaceChildren();
+    lock();
   } catch(error) {
     if(ended || leaving) return;clearPrivate();needsSession=true;
     notice('visit-notice',error.status===429?'Please wait a moment':'Visit unavailable','Your details are hidden until the server can confirm your session and visit. Reconnecting…');
