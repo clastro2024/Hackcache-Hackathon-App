@@ -195,4 +195,4 @@ test('S11/A11 HTTP scope: audit failure rolls login back; post-commit loss retur
   assert.equal((await lost.login('doctor12',{key})).body.error,'LOGIN_REAUTH_REQUIRED');
 });
 
-test.todo('S acceptance remaining: complete consent/clinical routes, hosted browser cookie enforcement and end-to-end revocation races');
+test.todo('S acceptance remaining: output releases, hosted browser cookie enforcement and connected-page clearing');

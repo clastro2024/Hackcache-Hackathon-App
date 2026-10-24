@@ -1,5 +1,4 @@
-import { API_BASE_URL } from '../shared/config.js';
+import { mountHeader } from '../shared/ui.js';
 
-// Build wiring only: no request, authentication or clinical behavior.
-const status = document.getElementById('build-status');
-if (status) status.textContent = `Browser module loaded. API base configured: ${API_BASE_URL}. No request sent.`;
+// Shared frame only. The sign-in controller will use the existing session helper.
+mountHeader(document.getElementById('app-header'), { area: 'utility' });

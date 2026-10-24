@@ -83,5 +83,18 @@ test('S02/A11 shared-helper HTTP integration: login, recovery and CSRF logout ag
   assert.equal((await session.signIn('staff',f.passwords.staff)).actor.role,'STAFF');
   const expiry=session.current.expires_at;await session.recover();assert.equal(session.current.expires_at,expiry);
   assert.equal((await session.signOut()).authenticated,false);assert.equal(session.current,null);assert.equal(api.pendingCount,0);
+  const route=await api.read('/navigation/route',{origin:'entrance',destination:'room_18',accessibility:'STEP_FREE',language:'hi'});
+  assert.equal(route.status,'ROUTE_AVAILABLE');assert.equal(route.language,'hi');
   // This adapter verifies application integration, not a browser's SameSite/CORS/Secure enforcement.
+});
+
+test('A11 browser helper scope: Retry-After takes precedence within retry admission',async()=>{
+  const waits=[];let time=0,calls=0;
+  const api=createApiClient({clock:()=>time,random:()=>0,sleep:async ms=>{waits.push(ms);time+=ms;},fetcher:async()=>{
+    calls+=1;if(calls>1)return reply({changed:true});
+    const response=reply({error:'EDGE_BUSY',retry_strategy:'SAME_KEY',commit_state:'NOT_APPLIED'},503);response.headers.set('Retry-After','2');return response;
+  }});
+  assert.equal((await api.command(api.createIntent('/auth/logout',{}))).changed,true);assert.deepEqual(waits,[2000]);
+  let blockedCalls=0;const blocked=createApiClient({fetcher:async()=>{blockedCalls+=1;const response=reply({error:'EDGE_BUSY',retry_strategy:'SAME_KEY',commit_state:'NOT_APPLIED'},503);response.headers.set('Retry-After','6');return response;}});
+  await assert.rejects(()=>blocked.command(blocked.createIntent('/auth/logout',{})),{code:'EDGE_BUSY'});assert.equal(blockedCalls,1);
 });

@@ -8,7 +8,8 @@ const sync=fn=>{if(typeof fn!=='function' || types.isAsyncFunction(fn)) throw ne
 export function createOperations(store,auth,{now,hooks={}}) {
   function keyFor(ctx,intent) {
     return {actor_id:ctx.actor.account_id,operation:`${intent.method} ${intent.path}`,idempotency_key:intent.key,
-      request_fingerprint:fingerprint({method:intent.method,path:intent.path,body:intent.body})};
+      request_fingerprint:fingerprint({method:intent.method,path:intent.path,body:intent.body,
+        ...(intent.sessionBound?{clinician_session_id:ctx.session.session_id}:{})})};
   }
   function checked(ref,intent,authorize) {
     const ctx=auth.authenticate(ref);

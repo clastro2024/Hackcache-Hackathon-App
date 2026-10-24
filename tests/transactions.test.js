@@ -137,4 +137,4 @@ test('D05 storage scope: terminate owned child after commit; restart keeps exact
   assert.equal(f.store.runUnit(false,()=>findReceipt(f.store,operation)).outcome.version,1);
   assert.equal(f.store.db.prepare('SELECT COUNT(*) n FROM mutation_receipts').get().n,1);
 });
-test.todo('D/A acceptance remaining: real domain-route races and storage fault recovery beyond controlled injections');
+test.todo('D/A acceptance remaining: output races and storage fault recovery beyond controlled injections');

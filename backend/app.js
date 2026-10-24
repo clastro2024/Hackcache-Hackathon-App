@@ -11,11 +11,20 @@ import { parseJSON, verifyChains } from './services/vault.js';
 import { createAuth, cookieReference, clearSessionCookie } from './auth.js';
 import { createOperations } from './operations.js';
 import { ApiError, loginSchema, emptySchema } from './schemas.js';
+import * as schemas from './schemas.js';
+import { createConsent } from './services/consent.js';
+import { createQueue } from './services/queue.js';
+import { createCapture } from './services/capture.js';
+import { createVault } from './services/vault.js';
+import { runChecks } from './services/checks.js';
 
 const pages=['login','patients','encounter','patient-visit'];
 const healthPaths=new Set(['/api/v1/health/live','/api/v1/health/ready']);
 const authPaths=new Set(['/api/v1/auth/login','/api/v1/auth/session','/api/v1/auth/logout']);
 const allowedHeaders=['content-type','x-csrf-token','x-idempotency-key'];
+const routeId='[A-Za-z0-9_-]{1,128}';
+const domainPaths=new RegExp(`^/api/v1/(?:queue/register|queue/(?:rooms|display)/${routeId}|queue/rooms/${routeId}/(?:call-next|pause|resume)|queue/tokens/${routeId}/(?:repeat-call|absent|recall|transfer|withdraw)|encounters/${routeId}/(?:check-in|complete|break-glass|allowance/(?:request|respond|clarify|status|revoke))|patients/me/visit|navigation/route)$`,'u');
+const clinicalPaths=new RegExp(`^/api/v1/(?:scribe/(?:transcribe|commit|drafts/${routeId}/(?:save|review))|encounters/${routeId}/draft|vault/(?:query|affirmation|patient/${routeId}/(?:events|active-state))|audit/integrity-check/${routeId})$`,'u');
 
 export function createClock(clock={utc:Date.now,mono:()=>performance.now()}) {
   let utc=-1,mono=-1,trusted=true;
@@ -40,6 +49,7 @@ async function verifyPublicTree(root) {
 
 function safeError(error) {
   if(error instanceof ApiError) return error;
+  if(error.code==='CLINICAL_INTEGRITY_INVALID') return new ApiError('CLINICAL_INTEGRITY_INVALID');
   const commitState=error.commit_state==='UNKNOWN'?'UNKNOWN':'NOT_APPLIED';
   if(commitState==='UNKNOWN') return new ApiError('COMMIT_OUTCOME_UNKNOWN',{commitState});
   if(error.type==='entity.too.large') return new ApiError('PAYLOAD_TOO_LARGE');
@@ -75,9 +85,13 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
     auth=await createAuth(store,settings,{now,hooks});
   } catch(error) {store.close();throw error;}
   const operations=createOperations(store,auth,{now,hooks});
+  const consent=createConsent(store,auth,operations,{now});
+  const queue=createQueue(store,auth,operations,consent,{now,map:fixtures.map});
+  const capture=createCapture(store,auth,operations,{now,settings,mock:fixtures.mock,hooks});
+  const vault=createVault(store,auth,operations,{now});
   const app=express();app.disable('x-powered-by');app.disable('etag');app.set('trust proxy',false);
   app.enable('case sensitive routing');app.enable('strict routing');
-  Object.assign(app.locals,{store,auth,operations,fixtures,now,draining:false,
+  Object.assign(app.locals,{store,auth,operations,consent,queue,capture,vault,fixtures,now,draining:false,
     close(){app.locals.draining=true;auth.close();store.close();}});
   app.use((req,res,next)=>{res.locals.requestId=randomUUID();res.set('X-Request-ID',res.locals.requestId);next();});
   app.use(helmet({contentSecurityPolicy:{directives:{defaultSrc:["'self'"],scriptSrc:["'self'"],styleSrc:["'self'"],
@@ -97,7 +111,8 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
     }
     if(req.method==='OPTIONS') {
       const requested=(req.get('Access-Control-Request-Headers') ?? '').toLowerCase().split(',').map(s=>s.trim()).filter(Boolean);
-      if(origin!==settings.frontendOrigin || !authPaths.has(req.originalUrl.split('?')[0]) ||
+      const requestedPath=req.originalUrl.split('?')[0];
+      if(origin!==settings.frontendOrigin || !(authPaths.has(requestedPath) || domainPaths.test(requestedPath) || clinicalPaths.test(requestedPath)) ||
         !['GET','POST'].includes(req.get('Access-Control-Request-Method')) || requested.some(h=>!allowedHeaders.includes(h))) return next(new ApiError('ORIGIN_REJECTED'));
       res.vary('Access-Control-Request-Headers');res.vary('Access-Control-Request-Method');
       res.set('Access-Control-Allow-Methods','GET, POST');res.set('Access-Control-Allow-Headers',allowedHeaders.join(', '));return res.status(204).end();
@@ -117,12 +132,13 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
   function postHeaders(req,res,next) {
     if(req.get('Origin')!==settings.frontendOrigin) return next(new ApiError('ORIGIN_REJECTED'));
     if(!z.uuid().safeParse(req.get('X-Idempotency-Key')).success) return next(new ApiError('VALIDATION_ERROR',{fields:[{path:'X-Idempotency-Key',code:'INVALID'}]}));
+    if(Object.keys(req.query).length) return next(new ApiError('VALIDATION_ERROR'));
     if(!/^application\/json(?:\s*;\s*charset=utf-8)?$/iu.test(req.get('Content-Type') ?? '') ||
       (req.get('Content-Encoding') && req.get('Content-Encoding').toLowerCase()!=='identity')) return next(new ApiError('UNSUPPORTED_MEDIA_TYPE'));
     next();
   }
   const body=express.raw({type:()=>true,limit:65536,inflate:false});
-  const validate=schema=>(req,res,next)=>{
+  const validate=(schema,onInvalid)=>async(req,res,next)=>{
     try {
       let value;
       try {value=parseJSON(new TextDecoder('utf-8',{fatal:true}).decode(req.body ?? Buffer.alloc(0)),65536);} catch {throw new ApiError('MALFORMED_JSON');}
@@ -130,8 +146,22 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
       if(!parsed.success) throw new ApiError('VALIDATION_ERROR',{fields:parsed.error.issues.slice(0,8).map(issue=>({
         path:['username','password'].includes(issue.path[0])?issue.path[0]:'body',code:'INVALID'}))});
       req.validated=parsed.data;next();
-    } catch(error) {next(error);}
+    } catch(error) {
+      try {if(onInvalid) await onInvalid(req,error);} catch(auditError) {return next(auditError);}
+      next(error);
+    }
   };
+  const parameters=(...names)=>(req,res,next)=>{
+    if(names.some(name=>!schemas.id.safeParse(req.params[name]).success)) return next(new ApiError('VALIDATION_ERROR'));
+    next();
+  };
+  const query=schema=>(req,res,next)=>{
+    const parsed=schema.safeParse(req.query);
+    if(!parsed.success) return next(new ApiError('VALIDATION_ERROR'));
+    req.validatedQuery=parsed.data;next();
+  };
+  const intent=req=>({method:'POST',path:req.path,body:req.validated,key:req.get('X-Idempotency-Key'),csrf:req.get('X-CSRF-Token')});
+  const ref=req=>cookieReference(req.get('Cookie'));
   app.post('/api/v1/auth/login',postHeaders,body,validate(loginSchema),async(req,res)=>{
     const result=await auth.login({...req.validated,key:req.get('X-Idempotency-Key'),ref:cookieReference(req.get('Cookie')),
       sourceIp:req.socket.remoteAddress});
@@ -150,6 +180,74 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory}={}) {
       {audit:ctx=>({patient_id:ctx.actor.patient_id ?? null,encounter_id:null,operation:'AUTH_LOGOUT',result:'SUCCESS',details:{session_id:ctx.session.session_id}})});
     res.set('Set-Cookie',clearSessionCookie(settings));return json(res,{authenticated:false,actor:null,...result});
   });
+  app.post('/api/v1/queue/register',postHeaders,body,validate(schemas.registerSchema),async(req,res)=>json(res,await queue.command(ref(req),intent(req),'register')));
+  for(const [action,schema] of [['call-next',schemas.queueVersionSchema],['pause',schemas.pauseSchema],['resume',schemas.queueVersionSchema]]) {
+    app.post(`/api/v1/queue/rooms/:room_id/${action}`,parameters('room_id'),postHeaders,body,validate(schema),
+      async(req,res)=>json(res,await queue.command(ref(req),intent(req),action,req.params.room_id)));
+  }
+  for(const [action,schema] of [['repeat-call',schemas.repeatCallSchema],['absent',schemas.absentSchema],['recall',schemas.recallSchema],['transfer',schemas.transferSchema],['withdraw',schemas.withdrawSchema]]) {
+    app.post(`/api/v1/queue/tokens/:token_id/${action}`,parameters('token_id'),postHeaders,body,validate(schema),
+      async(req,res)=>json(res,await queue.command(ref(req),intent(req),action,req.params.token_id)));
+  }
+  for(const [action,schema] of [['check-in',schemas.checkInSchema],['complete',schemas.queueVersionSchema]]) {
+    app.post(`/api/v1/encounters/:encounter_id/${action}`,parameters('encounter_id'),postHeaders,body,validate(schema),
+      async(req,res)=>json(res,await queue.command(ref(req),intent(req),action,req.params.encounter_id)));
+  }
+  for(const [action,schema] of [['request',schemas.requestAllowanceSchema],['respond',schemas.respondAllowanceSchema],['clarify',schemas.clarifyAllowanceSchema],['revoke',schemas.revokeAllowanceSchema]]) {
+    app.post(`/api/v1/encounters/:encounter_id/allowance/${action}`,parameters('encounter_id'),postHeaders,body,validate(schema),
+      async(req,res)=>json(res,await consent.command(ref(req),intent(req),req.params.encounter_id,action)));
+  }
+  app.post('/api/v1/encounters/:encounter_id/break-glass',parameters('encounter_id'),postHeaders,body,
+    validate(schemas.breakGlassSchema,(req,error)=>consent.recordEmergencyDenial(ref(req),req.params.encounter_id,error.code)),async(req,res)=>{
+      try {return json(res,await consent.command(ref(req),intent(req),req.params.encounter_id,'break-glass'));}
+      catch(error) {
+        if(error.commit_state==='NOT_APPLIED') await consent.recordEmergencyDenial(ref(req),req.params.encounter_id,error.code ?? 'INTERNAL_ERROR');
+        throw error;
+      }
+    });
+  app.get('/api/v1/queue/rooms/:room_id',parameters('room_id'),query(emptySchema),(req,res)=>json(res,queue.room(ref(req),req.params.room_id)));
+  app.get('/api/v1/queue/display/:room_id',parameters('room_id'),query(emptySchema),(req,res)=>json(res,queue.display(req.params.room_id)));
+  app.get('/api/v1/patients/me/visit',query(emptySchema),(req,res)=>json(res,queue.patientVisit(ref(req))));
+  app.get('/api/v1/navigation/route',query(schemas.navigationSchema),(req,res)=>json(res,queue.route(req.validatedQuery)));
+  app.get('/api/v1/encounters/:encounter_id/allowance/status',parameters('encounter_id'),query(emptySchema),(req,res)=>json(res,consent.status(ref(req),req.params.encounter_id)));
+  function clinicalResponse(res,result) {
+    if(result.locked || result.safe) return json(res,result.body);
+    // Final auth/source check occurs immediately before queuing the complete JSON response.
+    const value=JSON.parse(result.release().toString('utf8'));return json(res,value);
+  }
+  function captureAdmission(req,res,next) {
+    try {
+      const release=capture.admit(ref(req),req.get('X-CSRF-Token'));
+      req.capturePermit={release,working:false};
+      const finished=()=>{if(!req.capturePermit.working) release();};
+      res.once('finish',finished);res.once('close',finished);req.once('aborted',finished);next();
+    } catch(error) {next(error);}
+  }
+  app.post('/api/v1/scribe/transcribe',postHeaders,captureAdmission,body,validate(schemas.captureSchema),async(req,res)=>{
+    req.capturePermit.working=true;
+    try {await capture.beforeCapture();return clinicalResponse(res,await capture.command(ref(req),intent(req),'capture'));}
+    finally {req.capturePermit.release();}
+  });
+  for(const [action,schema] of [['save',schemas.saveDraftSchema],['review',schemas.reviewDraftSchema]]) {
+    app.post(`/api/v1/scribe/drafts/:draft_id/${action}`,parameters('draft_id'),postHeaders,body,validate(schema),
+      async(req,res)=>clinicalResponse(res,await capture.command(ref(req),intent(req),action,req.params.draft_id)));
+  }
+  app.post('/api/v1/scribe/commit',postHeaders,body,validate(schemas.commitDraftSchema),
+    async(req,res)=>clinicalResponse(res,await capture.command(ref(req),intent(req),'commit')));
+  app.get('/api/v1/encounters/:encounter_id/draft',parameters('encounter_id'),query(emptySchema),
+    async(req,res)=>clinicalResponse(res,await capture.readDraft(ref(req),req.params.encounter_id)));
+  for(const [kind,schema] of [['events',schemas.historyQuerySchema],['active-state',schemas.clinicalQuerySchema]]) {
+    app.get(`/api/v1/vault/patient/:patient_id/${kind}`,parameters('patient_id'),query(schema),
+      async(req,res)=>clinicalResponse(res,await vault.read(ref(req),{patientId:req.params.patient_id,
+        encounterId:req.validatedQuery.encounter_id,kind,query:req.validatedQuery})));
+  }
+  app.post('/api/v1/vault/query',postHeaders,body,validate(schemas.questionSchema),
+    async(req,res)=>clinicalResponse(res,await vault.query(ref(req),intent(req))));
+  app.post('/api/v1/vault/affirmation',postHeaders,body,validate(schemas.checkSchema),
+    async(req,res)=>clinicalResponse(res,await runChecks(vault,ref(req),intent(req))));
+  app.get('/api/v1/audit/integrity-check/:patient_id',parameters('patient_id'),query(schemas.clinicalQuerySchema),
+    async(req,res)=>clinicalResponse(res,await vault.read(ref(req),{patientId:req.params.patient_id,
+      encounterId:req.validatedQuery.encounter_id,kind:'integrity'})));
   app.use('/api',(req,res,next)=>next(new ApiError('RESOURCE_UNAVAILABLE')));
   app.get('/',(req,res)=>res.redirect(302,'/login/'));
   for(const name of [...pages,'shared']) app.use(`/${name}`,express.static(path.join(APP_ROOT,'frontend',name),{dotfiles:'deny',index:'index.html',fallthrough:false}));

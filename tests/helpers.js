@@ -42,10 +42,11 @@ export async function fixture(t) {
 }
 
 export async function httpFixture(t,options={}) {
+  const {serverEnv={},...appOptions}=options;
   const f=await fixture(t);f.store.close();
   const origin='http://127.0.0.1:3000';
-  const settings=loadServerSettings({FRONTEND_ORIGIN:origin,API_ORIGIN:origin,VAULTMED_DB_PATH:f.file});
-  const app=await createApp(settings,options);f.store=app.locals.store;
+  const settings=loadServerSettings({FRONTEND_ORIGIN:origin,API_ORIGIN:origin,VAULTMED_DB_PATH:f.file,...serverEnv});
+  const app=await createApp(settings,appOptions);f.store=app.locals.store;
   const server=http.createServer(app);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});
   const base=`http://127.0.0.1:${server.address().port}`;
@@ -60,4 +61,10 @@ export async function httpFixture(t,options={}) {
     return request('/api/v1/auth/login',{method:'POST',body:{username,password:f.passwords[username]},...extra});
   }
   return {...f,app,server,base,origin,settings,request,login};
+}
+
+export async function actorClient(f,username='staff') {
+  const login=await f.login(username);assert.equal(login.status,200,login.body.error);
+  return {login,get:route=>f.request(route,{cookie:login.cookie}),
+    post:(route,body,extra={})=>f.request(route,{method:'POST',cookie:login.cookie,csrf:login.body.csrf_token,body,...extra})};
 }

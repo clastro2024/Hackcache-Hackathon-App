@@ -1,0 +1,7 @@
+IBM Plex Sans and IBM Plex Sans Devanagari
+Unmodified complete WOFF2 files: Regular (400), Medium (500), SemiBold (600), Bold (700).
+Retrieved 24 October 2026 from the official IBM/plex repository:
+https://github.com/IBM/plex/tree/master/packages/plex-sans/fonts/complete/woff2
+https://github.com/IBM/plex/tree/master/packages/plex-sans-devanagari/fonts/complete/woff2
+License: accompanying OFL.txt, copied from https://github.com/IBM/plex/blob/master/LICENSE.txt
+No runtime font CDN or external font request is used.

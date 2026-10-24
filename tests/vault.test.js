@@ -40,4 +40,3 @@ test('C01/C02/C09 schema scope: six families, strict payloads and explicit sourc
   const negative=structuredClone(examples[4]);delete negative.payload.clinical_basis;
   assert.equal(eventSchema.safeParse(negative).success,false);
 });
-test.todo('C acceptance remaining: authorized reviewed commit, entity projection, topic answers and clinical release');

@@ -3,18 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>Sign in · VaultMed</title>
   <link rel="stylesheet" href="../assets/css/tailwind.css">
   <link rel="stylesheet" href="./login.css">
   <script type="module" src="./login.js"></script>
 </head>
 <body>
-  <main class="mx-auto max-w-3xl px-6 py-12">
-    <p class="mb-8 font-semibold text-primary">VaultMed / CharakVault</p>
-    <h1 class="mb-4 text-3xl font-semibold">Sign in</h1>
-    <p class="mb-4 text-lg">Environment foundation only. This page's workflow is not implemented.</p>
-    <p class="text-muted">No patient records, sign-in, queue actions or clinical operations are available in this setup shell.</p>
-    <p id="build-status" class="mt-6 text-sm text-muted">Static page loaded.</p>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div id="app-header"></div>
+  <main id="main-content" class="workspace login-shell" tabindex="-1">
+    <div class="page-heading">
+      <h1>Sign in</h1>
+      <p class="page-intro">Use your assigned account to continue.</p>
+    </div>
+    <section class="panel stack" aria-labelledby="setup-title">
+      <h2 id="setup-title">Sign-in form not available yet</h2>
+      <p class="muted">This page is being prepared. It does not sign you in or change an existing session.</p>
+    </section>
+    <noscript><p class="page-intro">JavaScript is needed to sign in and use this application. Ask hospital staff for assistance.</p></noscript>
   </main>
 </body>
 </html>

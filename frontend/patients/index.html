@@ -3,18 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>Patients · VaultMed</title>
   <link rel="stylesheet" href="../assets/css/tailwind.css">
   <link rel="stylesheet" href="./patients.css">
   <script type="module" src="./patients.js"></script>
 </head>
 <body>
-  <main class="mx-auto max-w-3xl px-6 py-12">
-    <p class="mb-8 font-semibold text-primary">VaultMed / CharakVault</p>
-    <h1 class="mb-4 text-3xl font-semibold">Patients</h1>
-    <p class="mb-4 text-lg">Environment foundation only. This page's workflow is not implemented.</p>
-    <p class="text-muted">No patient records, sign-in, queue actions or clinical operations are available in this setup shell.</p>
-    <p id="build-status" class="mt-6 text-sm text-muted">Static page loaded.</p>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div id="app-header"></div>
+  <main id="main-content" class="workspace patients-shell" tabindex="-1">
+    <div class="page-heading"><h1>Patients</h1></div>
+    <section class="panel stack" aria-labelledby="setup-title">
+      <h2 id="setup-title">Patient list not available yet</h2>
+      <p class="muted">Registration and room actions have not been connected on this page.</p>
+    </section>
+    <noscript><p class="page-intro">JavaScript is needed to use the patient list. Ask hospital staff for assistance.</p></noscript>
   </main>
 </body>
 </html>

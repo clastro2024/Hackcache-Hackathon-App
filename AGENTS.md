@@ -3,7 +3,7 @@
 This is the independent VaultMed / CharakVault application repository. Preserve unrelated work. Read README.md and docs/STATUS.md for actual implementation status.
 
 - Node.js 24 LTS, JavaScript ES modules, Express 5, better-sqlite3, strict Zod, argon2, cookie and helmet. HTML/Tailwind/vanilla JavaScript; no ORM, bundler, additional backend or AI SDK.
-- Current milestone includes setup/storage, server/health/shutdown, fixed-account login/session/logout, Origin/CSRF, permission and command/release coordinators, and shared browser API/session helpers. Page workflows, intake/queue/consent, reviewed clinical records and hosting remain unfinished. Helper/HTTP tests do not complete application acceptance.
+- Current milestone includes setup/storage/auth, step-3 queue/consent and step-4 manual/scripted capture, drafts, exact review/commit, entity projection, cited history/query and voluntary NOT_EVALUATED checks. Reviewed summary/FHIR output, connected browser flows and hosting remain unfinished. See docs/API.md and docs/STATUS.md; HTTP tests do not complete browser/application acceptance. Preserve concurrent frontend work.
 - One backend process, one database connection and one transaction owner. Keep business/audit/receipts atomic; no network, asynchronous wait or password hashing inside transactions.
 - Fixed fictional accounts; opaque server-side cookie sessions and CSRF. Server-bound role/object permission and consent are separate. Maxima: sessions 7200 seconds, requests 300 seconds, encounter grants 900 seconds.
 - Authenticate/authorize before matching a safe receipt; new-action version/state guards follow receipt matching. Preserve X-Idempotency-Key intent on retries.

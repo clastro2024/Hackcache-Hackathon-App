@@ -13,9 +13,12 @@ export function createApiClient({base=API_BASE_URL,fetcher=(...args)=>fetch(...a
   const pending=new Map(),listeners=new Set();
   const notify=reason=>{for(const listener of listeners) listener(reason);};
   function invalidate(reason) {epoch+=1;pending.clear();notify(reason);}
-  function route(path) {
+  function route(path,query={}) {
     if(typeof path!=='string' || !/^\/[A-Za-z0-9_/-]+$/u.test(path) || path.includes('//') || path.includes('..')) throw new RequestError('INVALID_PATH');
-    return `${base}${path}`;
+    const entries=Object.entries(query);
+    if(entries.length>10 || entries.some(([key,value])=>!/^[a-z_]+$/u.test(key) || !['string','number'].includes(typeof value))) throw new RequestError('INVALID_QUERY');
+    const search=new URLSearchParams(entries).toString();if(search.length>2048) throw new RequestError('INVALID_QUERY');
+    return `${base}${path}${search?`?${search}`:''}`;
   }
   function createIntent(path,body,{key=uuid()}={}) {
     route(path);
@@ -26,7 +29,7 @@ export function createApiClient({base=API_BASE_URL,fetcher=(...args)=>fetch(...a
     const intent=Object.freeze({key,path});
     pending.set(intent,{body:serialized,epoch});return intent;
   }
-  async function request(path,intent) {
+  async function request(path,intent,query) {
     const state=intent?pending.get(intent):null;
     if(intent && (!state || state.epoch!==epoch)) throw new RequestError('INTENT_INVALIDATED');
     const started=clock(),requestEpoch=epoch;
@@ -36,7 +39,7 @@ export function createApiClient({base=API_BASE_URL,fetcher=(...args)=>fetch(...a
       if(attempt>0 && clock()-started>=5000) throw lastError;
       let response,body,error;
       try {
-        response=await fetcher(route(path),{method:intent?'POST':'GET',credentials:'include',cache:'no-store',redirect:'error',
+        response=await fetcher(route(path,query),{method:intent?'POST':'GET',credentials:'include',cache:'no-store',redirect:'error',
           headers:intent?{'Content-Type':'application/json','X-Idempotency-Key':intent.key,...(csrf?{'X-CSRF-Token':csrf}:{})}:{},
           ...(intent?{body:state.body}:{}),signal:AbortSignal.timeout(10000)});
         const nextDataset=response.headers.get('X-Dataset-ID');
@@ -61,7 +64,9 @@ export function createApiClient({base=API_BASE_URL,fetcher=(...args)=>fetch(...a
         csrf=null;sessionIdentity=null;invalidate('SESSION_ENDED');throw error;
       }
       const retryable=intent && (error.status===0 || (error.status===503 && error.retry_strategy==='SAME_KEY'));
-      const wait=Math.floor(random()*(attempt===0?251:501));
+      const retryAfter=response?.headers.get('Retry-After');
+      const retryAfterMs=retryAfter && /^\d+$/u.test(retryAfter)?Number(retryAfter)*1000:0;
+      const wait=Math.max(Math.floor(random()*(attempt===0?251:501)),retryAfterMs);
       if(!retryable || attempt===2 || clock()-started+wait>=5000) {
         if(intent && error.commit_state!=='UNKNOWN' && error.retry_strategy!=='SAME_KEY') pending.delete(intent);
         throw error;
@@ -70,7 +75,7 @@ export function createApiClient({base=API_BASE_URL,fetcher=(...args)=>fetch(...a
       await sleep(wait);
     }
   }
-  return {createIntent,read:path=>request(path),command:intent=>request(intent.path,intent),
+  return {createIntent,read:(path,query)=>request(path,undefined,query),command:intent=>request(intent.path,intent),
     forget:intent=>pending.delete(intent),clear(reason='SESSION_ENDED'){csrf=null;sessionIdentity=null;invalidate(reason);},
     setSession(value) {
       const identity=value?.authenticated?`${value.actor.account_id}:${value.csrf_token}`:null;

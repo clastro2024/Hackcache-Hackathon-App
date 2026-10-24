@@ -184,6 +184,7 @@ export async function createAuth(store,settings,{now,hooks={}}) {
         grant.purpose!=='OPD_CONSULTATION' || grant.expires_at>ctx.session.expires_at) throw new ApiError('HISTORY_LOCKED');
       const allowed=z.array(z.enum(scopes)).max(5).parse(parseJSON(grant.scopes_json,8192));
       if(!allowed.includes(scope) || (grant.mode==='BREAK_GLASS' && !['triage:read','vault:query'].includes(scope))) throw new ApiError('SCOPE_DENIED');
+      if(grant.mode==='BREAK_GLASS' && !ctx.actor.permissions.includes('emergency:read')) throw new ApiError('SCOPE_DENIED');
       if(grant.mode==='PATIENT_APPROVED') {
         const request=store.db.prepare('SELECT * FROM consent_requests WHERE request_id=?').get(grant.request_id);
         if(!request || request.state!=='ALLOWED' || request.encounter_id!==found.encounter_id || request.patient_id!==found.patient_id ||

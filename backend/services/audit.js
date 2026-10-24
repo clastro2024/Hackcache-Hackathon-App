@@ -7,7 +7,7 @@ const label = z.string().regex(/^[A-Z][A-Z0-9_:.-]{0,63}$/u);
 const auditSchema = z.strictObject({ actor_id: id.nullable(), patient_id: id.nullable(), encounter_id: id.nullable(),
   operation: label, result: label, recorded_at: integer, details: auditDetailsSchema })
   .refine(value=>value.encounter_id===null || value.patient_id!==null);
-const keySchema = z.strictObject({ actor_id: id, operation: text(160), idempotency_key: z.uuid(), request_fingerprint: hash });
+const keySchema = z.strictObject({ actor_id: id, operation: text(256), idempotency_key: z.uuid(), request_fingerprint: hash });
 
 export function appendAudit(store, input) {
   requireStorage(store.inWriteUnit, 'WRITE_UNIT_REQUIRED');

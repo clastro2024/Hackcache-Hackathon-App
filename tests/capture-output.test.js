@@ -1,2 +1,2 @@
 import { test } from 'node:test';
-test.todo('ASR/F acceptance: offline/manual drafts, exact review, commit and source-checked output');
+test.todo('F acceptance remaining: reviewed source-checked summary and local R4 output/release');

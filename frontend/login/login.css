@@ -1,1 +1,2 @@
-/* Page-specific responsive/print rules belong here as this page is implemented. */
+.login-shell { max-width: 34rem; margin-block: 3rem; }
+@media (max-width: 40rem) { .login-shell { margin-block: 1rem; } }

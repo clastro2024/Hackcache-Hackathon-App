@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
-import { eventSchema } from '../schemas.js';
+import { createHash, randomUUID } from 'node:crypto';
+import { eventSchema, ApiError, topics } from '../schemas.js';
 
 export function vaultError(code) { return Object.assign(new Error(code), { code }); }
 const fail = () => { throw vaultError('CLINICAL_INTEGRITY_INVALID'); };
@@ -118,6 +118,9 @@ export function canonicalJSON(value, trail = [], depth = 0) {
 }
 
 export const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+export const termFamilies=Object.freeze({MEDICATION_RECORDED:['ecosprin_demo','metformin_demo','telmisartan_demo'],
+  CONDITION_RECORDED:['type2_diabetes_demo','renal_impairment_demo','mental_health_demo','dyspepsia_demo'],
+  ALLERGY_RECORDED:['penicillin_demo','latex_demo'],PROCEDURE_RECORDED:['cholecystectomy_demo']});
 export function eventHash(previous, canonical) {
   if (previous !== 'GENESIS' && !/^[a-f0-9]{64}$/u.test(previous)) fail();
   return digest(Buffer.concat([Buffer.from(`${previous}|`, 'ascii'), Buffer.from(canonical, 'utf8')]));
@@ -171,6 +174,10 @@ export function verifyChains(db) {
 export function appendEvents(store, values, { fixtureSeed = false } = {}) {
   if (!store.inWriteUnit) throw vaultError('WRITE_UNIT_REQUIRED');
   if (!fixtureSeed) throw vaultError('REVIEWED_COMMIT_REQUIRED');
+  if(values.some(value=>value.capture?.method!=='FIXTURE_SEED')) fail();
+  return appendBatch(store,values);
+}
+function appendBatch(store,values) {
   if (!Array.isArray(values) || values.length < 1 || values.length > 20) throw vaultError('INVALID_EVENT_BATCH');
   const db = store.db;
   const facility = db.prepare('SELECT facility_id FROM schema_meta WHERE singleton = 1').get().facility_id;
@@ -184,7 +191,7 @@ export function appendEvents(store, values, { fixtureSeed = false } = {}) {
   let previous = head.head_hash;
   return values.map((value, index) => {
     const event = eventSchema.parse(value);
-    if (event.capture.method !== 'FIXTURE_SEED' || event.patient_id !== patientId || event.facility_id !== facility ||
+    if (event.patient_id !== patientId || event.facility_id !== facility ||
       event.sequence !== head.checked_events + index + 1 || batchEntities.has(event.entity_id) ||
       values.some(other => other.event_id === event.supersedes_event_id)) fail();
     batchEntities.add(event.entity_id);
@@ -201,4 +208,166 @@ export function appendEvents(store, values, { fixtureSeed = false } = {}) {
   });
 }
 
-// Entity projection, evidence answers and protected clinical release remain pending.
+export function reviewedEvent(item,capture,{encounter,actorId,facilityId,reviewedAt,time,sequence,eventId}) {
+  return {...item,ledger_format:'v1',event_id:eventId,patient_id:encounter.patient_id,encounter_id:encounter.encounter_id,
+    facility_id:facilityId,sequence,recorded_by:actorId,recorded_at:new Date(time).toISOString(),synthetic:true,
+    capture:{method:capture.input_mode==='MANUAL_TEXT'?'MANUAL':'MOCK_ASR',fixture_id:capture.fixture_id,
+      extractor_version:capture.input_mode==='MANUAL_TEXT'?null:capture.extractor_version,confidence:null},
+    review:{status:'CLINICIAN_REVIEWED',reviewed_by:actorId,reviewed_at:new Date(reviewedAt).toISOString()}};
+}
+
+// The only live append entry accepts a persisted, exact reviewed draft, never caller event bodies.
+export function appendReviewedDraft(store,draftId,actorId,time) {
+  if(!store.inWriteUnit) throw vaultError('WRITE_UNIT_REQUIRED');
+  const row=store.db.prepare('SELECT * FROM clinical_drafts WHERE draft_id=?').get(draftId);
+  if(!row || row.state!=='REVIEWED' || row.reviewed_by!==actorId || digest(row.capture_json)!==row.reviewed_payload_hash) fail();
+  const encounter=store.db.prepare('SELECT * FROM encounters WHERE encounter_id=?').get(row.encounter_id);
+  if(!encounter || encounter.closed_at!==null || encounter.checked_in_at===null || encounter.clinician_id!==actorId) fail();
+  const capture=parseJSON(row.capture_json);if(canonicalJSON(capture)!==row.capture_json) fail();
+  const facilityId=store.db.prepare('SELECT facility_id FROM schema_meta WHERE singleton=1').get().facility_id;
+  const head=verifyPatient(store.db,encounter.patient_id,facilityId);
+  const values=capture.items.map((item,index)=>reviewedEvent(item,capture,{encounter,actorId,facilityId,
+    reviewedAt:row.reviewed_at,time,sequence:head.checked_events+index+1,eventId:`evt_${randomUUID()}`}));
+  const ids=appendBatch(store,values);
+  const final=store.db.prepare('SELECT sequence,event_hash FROM clinical_events WHERE event_id=?').get(ids.at(-1));
+  return {event_ids:ids,first_sequence:head.checked_events+1,last_sequence:final.sequence,head_hash:final.event_hash};
+}
+
+export function clinicalSource(store,patientId,asOf) {
+  const facility=store.db.prepare('SELECT facility_id FROM schema_meta WHERE singleton=1').get().facility_id;
+  let head;
+  try {head=verifyPatient(store.db,patientId,facility);} catch {throw new ApiError('CLINICAL_INTEGRITY_INVALID');}
+  const sequence=asOf ?? head.checked_events;
+  if(!Number.isSafeInteger(sequence) || sequence<0 || sequence>head.checked_events) throw new ApiError('VALIDATION_ERROR');
+  const rows=store.db.prepare('SELECT event_json,previous_hash,event_hash FROM clinical_events WHERE patient_id=? AND sequence<=? ORDER BY sequence').all(patientId,sequence);
+  return {patient_id:patientId,as_of_sequence:sequence,head_hash:rows.at(-1)?.event_hash ?? 'GENESIS',
+    rows:rows.map(row=>({event:parseJSON(row.event_json,65536),previous_hash:row.previous_hash,event_hash:row.event_hash}))};
+}
+export function project(source,time) {
+  const threads=new Map();
+  for(const {event} of source.rows) {
+    const old=threads.get(event.entity_id);
+    threads.set(event.entity_id,{root_sequence:old?.root_sequence ?? event.sequence,event});
+  }
+  const data={medications:[],conditions:[],allergies:[],procedures:[],negative_findings:[],warnings:[]};
+  const groups={MEDICATION_RECORDED:'medications',CONDITION_RECORDED:'conditions',ALLERGY_RECORDED:'allergies',
+    PROCEDURE_RECORDED:'procedures',NEGATIVE_FINDING_RECORDED:'negative_findings'};
+  const names=new Set();
+  for(const {event} of [...threads.values()].sort((a,b)=>a.root_sequence-b.root_sequence)) {
+    const group=groups[event.event_type];if(!group) continue; // Valid retractions are terminal, not negatives.
+    data[group].push({...event,tip_event_id:event.event_id});
+    const name=event.payload.concept?.text.normalize('NFKC').toLowerCase();
+    if(name && names.has(`${group}:${name}`)) data.warnings.push('POSSIBLE_DUPLICATE_SEPARATE_ENTITY_THREADS');
+    if(name) names.add(`${group}:${name}`);
+  }
+  data.warnings=[...new Set([...data.warnings,'Records describe documented statements, not clinical absence, adherence or safety.'])];
+  return {patient_id:source.patient_id,as_of_sequence:source.as_of_sequence,projected_at:new Date(time).toISOString(),
+    event_count:source.as_of_sequence,projection_status:'COMPLETE',clinical_data:data};
+}
+export const supportedQuestions=Object.freeze([
+  'Any blood thinners or anticoagulants before surgery?','Penicillin allergy history?',
+  'Any documented latex allergy assessment?','Historical renal impairment?','Any recorded surgeries?',
+  'Any recorded mental-health diagnoses?',
+]);
+const normalize=value=>value.normalize('NFKC').trim().replace(/\s+/gu,' ').toLowerCase().replace(/\?$/u,'').trimEnd();
+export function questionTopic(question) {
+  const index=supportedQuestions.findIndex(value=>normalize(value)===normalize(question));
+  if(index<0) throw new ApiError('UNSUPPORTED_QUESTION');return topics[index];
+}
+export function citation(event) {
+  return {event_id:event.event_id,sequence:event.sequence,recorded_at:event.recorded_at,
+    source_date:event.source.authored_on,occurred_on:event.occurred_on,occurrence_text:event.occurrence_text,
+    source_kind:event.source.kind,source_author:event.source.original_author,review_status:event.review.status,synthetic:true};
+}
+export function answerQuestion(source,topic,time) {
+  const data=project(source,time).clinical_data;
+  const index=topics.indexOf(topic);
+  const group=['medications','allergies','allergies','conditions','procedures','conditions'][index];
+  const key=['ecosprin_demo','penicillin_demo','latex_demo','renal_impairment_demo','cholecystectomy_demo','mental_health_demo'][index];
+  const records=data[group];
+  const positive=records.filter(e=>e.payload.concept.term_key===key);
+  const gaps=records.filter(e=>!termFamilies[e.event_type]?.includes(e.payload.concept.term_key));
+  const negative=data.negative_findings.filter(e=>e.payload.scope.topic_key===topic);
+  const lookup=gaps.length?'INCOMPLETE':positive.length && negative.length?'CONFLICT':'COMPLETE';
+  const certainty=lookup!=='COMPLETE'?null:positive.length?'VERIFIED_POSITIVE':negative.length?'DOCUMENTED_NEGATIVE':'NOT_RECORDED_IN_VAULT';
+  const selected=[...positive,...negative,...gaps].sort((a,b)=>a.sequence-b.sequence);
+  const warnings=['This fictional vault and limited vocabulary do not establish clinical absence or safety.'];
+  let answer;
+  if(lookup==='INCOMPLETE') answer='Relevant records contain unmapped concepts. Available sources require clinician interpretation; no certainty verdict is given.';
+  else if(lookup==='CONFLICT') answer='Positive records and separate negative declarations require clinician interpretation. Both sources remain visible; no certainty verdict is given.';
+  else if(positive.length) answer='Matching documented history is present. Read each cited statement, status and source date; a prescription or stopped medicine does not prove current use or clearance.';
+  else if(negative.length) answer='A dated source explicitly records a negative finding only within its stated assessment scope. This does not establish current clinical absence or safety.';
+  else answer='No supporting record was found in this vault/topic at this sequence. Missing documentation does not establish absence or safety.';
+  return {ruleset_version:'demo-topics-v1',topic_key:topic,lookup_status:lookup,certainty_state:certainty,answer_text:answer,
+    source_citations:selected.map(citation),facts:selected.map(event=>({event_id:event.event_id,entity_id:event.entity_id,
+      event_type:event.event_type,payload:event.payload,occurred_on:event.occurred_on,occurrence_text:event.occurrence_text})),
+    ...(certainty==='DOCUMENTED_NEGATIVE'?{documented_negative_detail:negative.at(-1).payload}:{}),
+    warnings,coverage:{vocabulary_version:'demo-topics-v1',unmapped_event_ids:gaps.map(e=>e.event_id),
+      scope_description:`Fictional ${topic} records through patient sequence ${source.as_of_sequence}`}};
+}
+
+export function createVault(store,auth,operations,{now}) {
+  function authorize(ref,patientId,encounterId,scope) {
+    const ctx=auth.authenticate(ref);
+    if(ctx.actor.role==='PATIENT') {auth.ownPatient(ref,patientId);return ctx;}
+    if(!encounterId) throw new ApiError('RESOURCE_UNAVAILABLE');
+    const assigned=auth.encounter(ref,encounterId);
+    if(assigned.actor.role!=='CLINICIAN' || assigned.encounter.patient_id!==patientId) throw new ApiError('RESOURCE_UNAVAILABLE');
+    return auth.encounter(ref,encounterId,{scope});
+  }
+  async function read(ref,{patientId,encounterId,kind,query={},intent,compute}) {
+    auth.admitSensitive(ref);
+    const scope=kind==='events'?'vault:read':kind==='query'?'vault:query':kind==='checks'?'affirmation:run':'triage:read';
+    const authorizeRead=()=>{
+      if(['query','checks'].includes(kind) && auth.authenticate(ref).actor.role!=='CLINICIAN') throw new ApiError('SCOPE_DENIED');
+      return authorize(ref,patientId,encounterId,scope);
+    };
+    if(kind==='active-state') {
+      try {store.runUnit(false,authorizeRead);} catch(error) {
+        if(!['HISTORY_LOCKED','GRANT_ENDED','SCOPE_DENIED'].includes(error.code)) throw error;
+        // Relationship was already checked; LOCKED is never an empty clinical record.
+        return {locked:true,body:{authorization_state:'LOCKED',clinical_data:null}};
+      }
+    }
+    const result=await operations.readProtected(ref,{intent,authorize:authorizeRead,maxBytes:1048576,
+      capture:(ctx,receipt)=>{
+        if(receipt && receipt.ruleset_version!==(kind==='checks'?'no-active-clinical-rules-v1':'demo-topics-v1')) throw new ApiError('INVALID_TRANSITION');
+        const source=clinicalSource(store,patientId,receipt?.as_of_sequence ?? query.as_of_sequence);
+        if((query.after_sequence ?? 0)>source.as_of_sequence) throw new ApiError('VALIDATION_ERROR');
+        const outcome=receipt ?? {status:'CLINICAL_READ',changed:false,patient_id:patientId,...(encounterId?{encounter_id:encounterId}:{}),
+          as_of_sequence:source.as_of_sequence,ruleset_version:kind==='checks'?'no-active-clinical-rules-v1':'demo-topics-v1',
+          ...(intent?{query_id:randomUUID()}:{}),committed_at:new Date(now()).toISOString()};
+        return {source:{...source,outcome,replayed:Boolean(receipt)},outcome};
+      },
+      compute:source=>{
+        const shared={authorization_state:'AUTHORIZED',patient_id:patientId,encounter_id:encounterId ?? null,
+          as_of_sequence:source.as_of_sequence,replayed:source.replayed};
+        if(compute) return compute(source,shared);
+        if(kind==='active-state') return {...shared,...project(source,now())};
+        if(kind==='integrity') return {...shared,integrity_status:'VALID',checked_events:source.as_of_sequence,head_hash:source.head_hash,
+          limitation:'Hash consistency is tamper evidence, not proof of source truth or an independent signature.'};
+        const page=source.rows.filter(row=>row.event.sequence>(query.after_sequence ?? 0)).slice(0,query.limit ?? 50);
+        return {...shared,events:page,next_after_sequence:page.at(-1)?.event.sequence<source.as_of_sequence?page.at(-1).event.sequence:null};
+      },
+      recheck:(_ctx,snapshot)=>{
+        const fresh=clinicalSource(store,patientId,snapshot.source.as_of_sequence);
+        if(fresh.head_hash!==snapshot.source.head_hash) throw new ApiError('CLINICAL_INTEGRITY_INVALID');
+      },
+      audit:(ctx,snapshot)=>({patient_id:patientId,encounter_id:ctx.encounter?.encounter_id ?? null,operation:`CLINICAL_${kind.replaceAll('-','_').toUpperCase()}`,
+        result:'RELEASED',details:{as_of_sequence:snapshot.source.as_of_sequence,
+          ...(ctx.grant?{grant_id:ctx.grant.grant_id,mode:ctx.grant.mode}:{}),purpose:'OPD_CONSULTATION'}}),
+    });
+    return result;
+  }
+  return {read,query:async(ref,intent)=>{
+    const {patient_id:patientId,encounter_id:encounterId,question_text:question}=intent.body;
+    // Unsupported input is checked after current scope, before any source inspection.
+    store.runUnit(false,()=>{
+      const ctx=authorize(ref,patientId,encounterId,'vault:query');
+      if(ctx.actor.role!=='CLINICIAN') throw new ApiError('SCOPE_DENIED');auth.csrf(ctx,intent.csrf);
+    });
+    const topic=questionTopic(question);
+    return read(ref,{patientId,encounterId,kind:'query',intent,compute:(source,shared)=>({...shared,query_id:source.outcome.query_id,
+      question_text:question,...answerQuestion(source,topic,now())})});
+  },authorize};
+}
