@@ -9,16 +9,44 @@
   <link rel="stylesheet" href="./patients.css">
   <script type="module" src="./patients.js"></script>
 </head>
-<body>
+<body class="patients-page">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div id="app-header"></div>
   <main id="main-content" class="workspace patients-shell" tabindex="-1">
-    <div class="page-heading"><h1>Patients</h1></div>
-    <section class="panel stack" aria-labelledby="setup-title">
-      <h2 id="setup-title">Patient list not available yet</h2>
-      <p class="muted">Registration and room actions have not been connected on this page.</p>
+    <section class="panel ledger" aria-labelledby="patients-title">
+      <div class="ledger-toolbar">
+        <h1 id="patients-title">Patients</h1>
+        <div class="room-field"><label class="sr-only" for="room">Room</label><select id="room" class="field-control" disabled><option>Checking session…</option></select></div>
+        <p id="service-state" class="status"></p>
+        <p id="last-contact" class="muted contact-time"></p>
+        <div class="toolbar-actions"><button id="pause-queue" type="button" class="button button--secondary" hidden>Pause queue</button><button id="register-patient" type="button" class="button button--secondary" hidden>Register patient</button></div>
+        <p id="registration-permission" class="sr-only">Patient registration requires an assigned room-staff account with intake permission.</p>
+      </div>
+      <div id="connection-notice" class="ledger-notice" aria-live="polite"><p class="muted">Checking your session…</p></div>
+      <div id="command-notice" class="ledger-notice" aria-live="polite"></div>
+      <div id="queue-content" hidden>
+        <div class="ledger-table-wrap">
+          <table class="ledger-table"><caption class="sr-only">Current patient and waiting order</caption><thead><tr><th scope="col">Position</th><th scope="col">Token</th><th scope="col">Patient</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody id="queue-rows"></tbody></table>
+        </div>
+        <div id="empty-queue" class="empty-queue" hidden></div>
+        <div id="call-next-region" class="call-next-region"></div>
+        <details id="absent-section" class="absent-section"><summary id="absent-count">Absent patients (0)</summary><div id="absent-rows" class="absent-rows"></div></details>
+      </div>
     </section>
     <noscript><p class="page-intro">JavaScript is needed to use the patient list. Ask hospital staff for assistance.</p></noscript>
   </main>
+  <dialog id="registration" class="dialog registration-sheet" aria-labelledby="registration-title">
+    <div class="dialog-head"><h2 id="registration-title" class="dialog-title">Register patient</h2><button id="close-registration" class="dialog-close" type="button" aria-label="Close registration">×</button></div>
+    <form id="registration-form" class="dialog-body stack" novalidate>
+      <p id="registration-room" class="muted"></p>
+      <p class="field-help">Create a local visit. This does not create a patient account. Use fictional details only.</p>
+      <div class="field"><label class="field-label" for="patient-name">Patient name</label><input id="patient-name" name="display_name" class="field-control" maxlength="100" autocomplete="off" required data-initial-focus><p id="patient-name-error" class="field-error" hidden></p></div>
+      <div class="field"><label class="field-label" for="patient-dob">Date of birth <span class="muted">(optional)</span></label><input id="patient-dob" name="date_of_birth" type="date" class="field-control" autocomplete="off"><p id="patient-dob-error" class="field-error" hidden></p></div>
+      <div class="field"><label class="field-label" for="patient-language">Preferred language</label><select id="patient-language" name="language" class="field-control"><option value="en">English</option><option value="hi">Hindi / हिन्दी</option></select><p class="field-help">Records the preference; this interface is currently in English.</p></div>
+      <div id="discard-registration" class="notice notice--caution" hidden><div class="notice-copy"><p class="notice-title">Discard these details?</p><p class="notice-message">A token has not been requested.</p><div class="dialog-actions"><button id="keep-editing" class="button button--secondary" type="button">Keep editing</button><button id="discard-details" class="button button--danger" type="button">Discard details</button></div></div></div>
+      <div class="dialog-actions"><button class="button" type="submit">Issue token</button></div>
+    </form>
+  </dialog>
+  <dialog id="queue-decision" class="dialog" aria-labelledby="decision-title"><div class="dialog-head"><h2 id="decision-title" class="dialog-title"></h2><button type="button" class="dialog-close" aria-label="Close decision" data-dialog-close>×</button></div><form id="decision-form" class="dialog-body stack" novalidate><p id="decision-patient"></p><p id="decision-copy" class="muted"></p><div id="reason-field" class="field" hidden><label for="decision-reason" class="field-label">Reason</label><textarea id="decision-reason" class="field-control" maxlength="500" rows="3"></textarea><p id="reason-error" class="field-error" hidden></p></div><div class="dialog-actions"><button type="button" class="button button--secondary" data-dialog-close>Cancel</button><button id="confirm-decision" type="submit" class="button">Confirm</button></div></form></dialog>
 </body>
 </html>

@@ -63,7 +63,7 @@
     --shadow-floating: 0 8px 24px rgb(29 43 42 / 10%);
   }
   html { font-family: var(--font-sans); scrollbar-color: var(--color-border-control) var(--color-canvas); }
-  body { margin: 0; background: var(--color-canvas); color: var(--color-ink); font-size: 1rem; line-height: 1.5; }
+  body { margin: 0; background: var(--color-canvas); color: var(--color-ink); font-size: calc(1rem * var(--ui-text-scale, 1)); line-height: 1.5; }
   :lang(hi) { font-family: var(--font-devanagari); }
   [hidden] { display: none !important; }
   ::selection { color: var(--color-ink); background: var(--color-tint); }
@@ -73,8 +73,8 @@
   button:not(:disabled), summary { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
   :where(h1, h2, h3, p) { margin: 0; }
-  h1 { font-size: 2rem; line-height: 1.25; font-weight: 600; text-wrap: balance; }
-  h2 { font-size: 1.25rem; line-height: 1.4; font-weight: 600; }
+  h1 { font-size: calc(2rem * var(--ui-text-scale, 1)); line-height: 1.25; font-weight: 600; text-wrap: balance; }
+  h2 { font-size: calc(1.25rem * var(--ui-text-scale, 1)); line-height: 1.4; font-weight: 600; }
   a { text-underline-offset: 0.2em; }
   :where(p, h1, h2, h3, button, a, label) { overflow-wrap: anywhere; }
   ::placeholder { color: var(--color-muted); opacity: 1; }
@@ -87,20 +87,27 @@
   .shell-header { position: relative; z-index: 10; border-bottom: 1px solid var(--color-border-subtle); background: var(--color-surface); }
   .shell-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-6); min-height: 4.5rem; padding: var(--space-3) var(--space-6); }
   .shell-identity, .shell-account, .shell-utilities { display: flex; align-items: center; gap: var(--space-6); min-width: 0; }
-  .brand { color: var(--color-primary); font-size: 1.75rem; font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; }
+  .brand { color: var(--color-primary); font-size: calc(1.75rem * var(--ui-text-scale, 1)); font-weight: 600; line-height: 1.2; text-decoration: none; white-space: nowrap; }
   .shell-navigation { display: flex; align-items: center; border-inline-start: 1px solid var(--color-border-subtle); padding-inline-start: var(--space-6); }
   .nav-link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 2.75rem; color: var(--color-primary); text-decoration: none; }
   .nav-link[aria-current="page"] { box-shadow: 0 2px var(--color-primary); font-weight: 600; }
-  .demo-label { color: var(--color-muted); font-size: 0.875rem; }
+  .demo-label { color: var(--color-muted); font-size: calc(0.875rem * var(--ui-text-scale, 1)); }
   .shell-account { max-width: 100%; }
   .account { position: relative; min-width: 0; max-width: 100%; }
   .account-trigger { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; min-height: 2.75rem; padding: var(--space-2); border-radius: var(--radius-sm); text-align: start; }
   .account-trigger:hover, .account-trigger[aria-expanded="true"] { background: var(--color-tint); }
-  .account-copy { display: grid; min-width: 0; max-width: 18rem; }
-  .account-role { color: var(--color-muted); font-size: 0.875rem; }
-  .account-menu { position: absolute; inset-block-start: calc(100% + 0.5rem); inset-inline-end: 0; width: min(18rem, calc(100vw - 2rem)); padding: var(--space-2); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-floating); }
+  .account-trigger > .icon:first-child { width: calc(3rem * var(--ui-text-scale, 1)); height: calc(3rem * var(--ui-text-scale, 1)); color: var(--color-primary); }
+  .account-trigger > .icon:last-child { width: 1.25rem; height: 1.25rem; }
+  .account-copy { display: grid; gap: 0; min-width: 0; max-width: 18rem; line-height: 1.25; }
+  .account-role { color: var(--color-muted); font-size: calc(0.875rem * var(--ui-text-scale, 1)); }
+  .account-menu { position: absolute; inset-block-start: calc(100% + 0.5rem); inset-inline-end: 0; z-index: 20; width: min(18rem, calc(100vw - 2rem)); padding: var(--space-2); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-floating); }
   .menu-action { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 3rem; padding: var(--space-3); border-radius: var(--radius-sm); color: var(--color-ink); text-align: start; text-decoration: none; }
   .menu-action:hover { background: var(--color-canvas); }
+  .menu-action--danger { color: var(--color-danger); }
+  .menu-action--danger:hover { background: var(--color-danger-bg); }
+  .menu-action:disabled { color: var(--color-muted); opacity: .6; }
+  .account-trigger > .icon:last-child { transition: transform var(--motion-fast); }
+  .account-trigger[aria-expanded="true"] > .icon:last-child { transform: rotate(180deg); }
   .menu-divider { margin-block: var(--space-2); border: 0; border-top: 1px solid var(--color-border-subtle); }
   .shell-utilities { justify-content: space-between; border-top: 1px solid var(--color-border-subtle); padding: var(--space-3) var(--space-6); }
   .workspace { width: 100%; max-width: 100rem; margin-inline: auto; padding: var(--space-6); }
@@ -123,9 +130,20 @@
   .field { display: grid; gap: var(--space-2); }
   .field-label { font-weight: 500; }
   .field-control { width: 100%; min-height: 2.75rem; padding: 0.75rem; border: 1px solid var(--color-border-control); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink); }
+  select.field-control { appearance: none; padding-inline-end: 2.75rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23165d66' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-position: right .875rem center; background-size: 1.125rem; background-repeat: no-repeat; cursor: pointer; }
+  select.field-control:hover:not(:disabled) { border-color: var(--color-primary); }
+  select.field-control:disabled { cursor: not-allowed; color: var(--color-muted); background-color: var(--color-canvas); }
+  input:is([type="checkbox"], [type="radio"]) { appearance: none; display: inline-grid; place-content: center; flex: 0 0 auto; width: 1.25rem; height: 1.25rem; margin: 0; border: 1.5px solid var(--color-border-control); border-radius: .375rem; background: var(--color-surface); vertical-align: middle; cursor: pointer; }
+  input[type="radio"] { border-radius: 50%; }
+  input:is([type="checkbox"], [type="radio"]):checked { border-color: var(--color-primary); background-color: var(--color-primary); }
+  input[type="checkbox"]:checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 4 4L19 6'/%3E%3C/svg%3E"); background-size: 100%; }
+  input[type="radio"]:checked::after { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--color-on-primary); }
+  input[type="checkbox"]:indeterminate { border-color: var(--color-primary); background: var(--color-primary); }
+  input[type="checkbox"]:indeterminate::after { content: ""; width: .625rem; height: 2px; background: var(--color-on-primary); }
+  input:is([type="checkbox"], [type="radio"]):disabled { opacity: .5; cursor: not-allowed; }
   textarea.field-control { min-height: 8rem; resize: vertical; }
   .field-control[aria-invalid="true"] { border-color: var(--color-danger); }
-  .field-help { color: var(--color-muted); font-size: 0.875rem; }
+  .field-help { color: var(--color-muted); font-size: calc(0.875rem * var(--ui-text-scale, 1)); }
   .field-error { color: var(--color-danger); }
   .tabs { display: flex; gap: var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
   .tab { min-height: 2.75rem; padding: var(--space-2); border-bottom: 2px solid transparent; color: var(--color-muted); }
@@ -151,13 +169,28 @@
   .dialog-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 2.75rem; height: 2.75rem; border-radius: var(--radius-sm); }
   .dialog-close:hover { background: var(--color-tint); }
   .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); margin-block-start: var(--space-6); }
-  .patient-surface { font-size: 1.125rem; line-height: 1.75rem; }
-  .patient-surface h1 { font-size: 1.75rem; line-height: 2.25rem; }
+  .patient-surface { font-size: calc(1.125rem * var(--ui-text-scale, 1)); line-height: 1.75rem; }
+  .patient-surface h1 { font-size: calc(1.75rem * var(--ui-text-scale, 1)); line-height: 2.25rem; }
   .patient-surface :where(.button, .account-trigger, .menu-action, .dialog-close, .text-link) { min-height: 3rem; }
-  .patient-surface .button { min-height: 3.5rem; font-size: 1.125rem; }
+  .patient-surface .button { min-height: 3.5rem; font-size: calc(1.125rem * var(--ui-text-scale, 1)); }
   .patient-surface .dialog-close { min-width: 3rem; }
   .patient-surface .field-control { min-height: 3rem; }
   .print-only { display: none; }
+}
+
+/* Keep native selection, keyboard handling and form values; customize its picker. */
+@supports (appearance: base-select) {
+  select.field-control, select.field-control::picker(select) { appearance: base-select; }
+  select.field-control { background-image: none; padding-inline-end: 1rem; gap: .75rem; }
+  select.field-control::picker-icon { content: ""; width: 1.125rem; height: 1.125rem; flex: 0 0 auto; margin-inline-start: auto; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23165d66' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; transition: transform var(--motion-fast); }
+  select.field-control:open { border-color: var(--color-primary); }
+  select.field-control:open::picker-icon { transform: rotate(180deg); }
+  select.field-control::picker(select) { margin-block: .375rem; padding: .375rem; max-height: min(20rem, 60dvh); border: 0; border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-ink); box-shadow: var(--shadow-floating), 0 0 0 1px var(--color-border-subtle); font: inherit; }
+  select.field-control option { display: flex; align-items: center; gap: .75rem; min-height: 2.75rem; padding: .625rem .75rem; border-radius: .5rem; background: var(--color-surface); color: var(--color-ink); cursor: pointer; }
+  select.field-control option:checked { background: var(--color-tint); color: var(--color-primary); font-weight: 600; }
+  select.field-control option:is(:hover, :focus-visible) { background: var(--color-canvas); outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  select.field-control option:disabled { color: var(--color-muted); opacity: .6; cursor: not-allowed; }
+  select.field-control option::checkmark { order: 1; margin-inline-start: auto; color: var(--color-primary); }
 }
 
 @keyframes status-breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
@@ -166,10 +199,10 @@
   .shell-bar { flex-wrap: wrap; gap: var(--space-3); padding-inline: var(--space-4); }
   .shell-identity, .shell-account { gap: var(--space-3); }
   .shell-account { margin-inline-start: auto; }
-  .brand { font-size: 1.5rem; }
+  .brand { font-size: calc(1.5rem * var(--ui-text-scale, 1)); }
   .shell-navigation { padding-inline-start: var(--space-3); }
   .demo-label { display: none; }
-  .account-trigger > .icon:first-child { display: none; }
+  .account-trigger > .icon:first-child { width: calc(2.75rem * var(--ui-text-scale, 1)); height: calc(2.75rem * var(--ui-text-scale, 1)); }
   .shell-utilities { gap: var(--space-3); padding-inline: var(--space-4); }
   .workspace { padding: var(--space-6) var(--space-4); }
   .panel { padding: var(--space-4); }
@@ -183,6 +216,7 @@
 
 @media (forced-colors: active) {
   .button, .field-control, .account-menu, .dialog, .notice { border-color: ButtonText; }
+  input:is([type="checkbox"], [type="radio"]) { appearance: auto; }
   .nav-link[aria-current="page"], .tab[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 

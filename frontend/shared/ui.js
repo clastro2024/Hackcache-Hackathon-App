@@ -14,6 +14,13 @@ const paths = {
   check: ['m5 12 4 4L19 6'],
   warning: ['M10.3 4a2 2 0 0 1 3.4 0l8 14a2 2 0 0 1-1.7 3H4a2 2 0 0 1-1.7-3Z', 'M12 9v4', 'M12 17h.01'],
   signOut: ['M9 21H4V3h5', 'M9 12h12', 'm16 7 5 5-5 5'],
+  plus: ['M12 5v14', 'M5 12h14'],
+  pause: ['M8 5v14', 'M16 5v14'],
+  play: ['m8 5 11 7-11 7Z'],
+  clock: ['M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z', 'M12 7v5l3 2'],
+  phone: ['M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.4 1.8.6 2.8.7a2 2 0 0 1 1.8 2.1Z'],
+  more: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
+  print: ['M6 9V3h12v6', 'M6 18H4V9h16v9h-2', 'M6 15h12v6H6Z', 'M17 12h.01'],
 };
 
 function element(tag, className, text) {
@@ -178,6 +185,7 @@ export function mountHeader(target,{area='provider',page='patients',accountLabel
   if(area==='patient') {const utilities=element('div','shell-utilities');header.append(utilities);action('Language: English','globe',language,utilities);action('Help','help',help,utilities);}
   else {action('Language: English','globe',language);action('Help','help',help);menu.append(element('hr','menu-divider'));}
   if(onSignOut) {
+    if(area==='patient') menu.append(element('p','field-help account-note','Signing out does not stop sharing. Use Stop sharing on your visit.'));
     const signOut=element('button','menu-action','Sign out');signOut.type='button';signOut.prepend(icon('signOut'));
     signOut.addEventListener('click',()=>{disclosure.close();onSignOut();});menu.append(signOut);
   } else {const signIn=element('a','menu-action','Sign in');signIn.href='../login/';signIn.prepend(icon('person'));menu.append(signIn);}
