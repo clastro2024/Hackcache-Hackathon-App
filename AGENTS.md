@@ -2,6 +2,8 @@
 
 This is the independent VaultMed / CharakVault application repository. Preserve unrelated work. Read README.md and docs/STATUS.md for actual implementation status.
 
+- The user requested on 25 October 2026 that App work continue directly on `main`. Use `main` for future work unless the user explicitly requests another branch; preserve concurrent uncommitted changes when switching.
+
 - Node.js 24 LTS, JavaScript ES modules, Express 5, better-sqlite3, strict Zod, argon2, cookie and helmet. HTML/Tailwind/vanilla JavaScript; no ORM, bundler, additional backend or AI SDK.
 - Current milestone includes setup/storage/auth, queue/consent, manual/scripted capture, exact review/commit, cited history/query, voluntary NOT_EVALUATED checks, reviewed summary/local R4 output, own-patient audit access, telemetry, actual forced-drain testing and an owned-process resource harness. Sarvam is integrated/live-checked and locally enabled with an expiring private credit confirmation; Render supports private key/credit-secret setup. The ten-case live evaluation completed with classification limitations; actual hosted operation and broader quality remain unverified. Official FHIR validation stays NOT_RUN. Existing page controls are integrated and locally browser-checked; hosted verification remains pending. See docs/AI.md, docs/STATUS.md, docs/API.md and docs/OPERATIONS.md. Preserve concurrent frontend work.
 - One backend process, one database connection and one transaction owner. Keep business/audit/receipts atomic; no network, asynchronous wait or password hashing inside transactions.
