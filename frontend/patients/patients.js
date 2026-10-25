@@ -111,7 +111,8 @@ function renderPatient(patient,current=false) {
   status.setAttribute('role','cell');actions.setAttribute('role','cell');status.dataset.label='Status';actions.dataset.label='Actions';
   if(current) {
     const state=node('span',`patient-status ${patient.checked_in?'consultation-state':'arrival-state'}`);
-    state.append(icon(patient.checked_in?'check':'clock'),node('span','',patient.checked_in?'In consultation':'Awaiting arrival'));status.append(state);
+    if(!patient.checked_in) state.append(icon('clock'));
+    state.append(node('span','',patient.checked_in?'In consultation':'Awaiting arrival'));status.append(state);
     if(!patient.checked_in) {
       status.append(node('span','call-count',`Calls made: ${patient.call_attempts} of 3`));
       if(canOperate()) {
@@ -125,7 +126,7 @@ function renderPatient(patient,current=false) {
       // The next page rechecks server authority; identifiers grant no access.
       const link=node('a','button','Open encounter');link.dataset.encounterLink=`../encounter/?${new URLSearchParams({encounter_id:patient.encounter_id,patient_id:patient.patient_id,room_id:roomId})}`;
       controls.append(link);
-    } else status.append(node('span','call-count','The clinician continues care.'));
+    }
   } else if(patient.queue_state==='RECALLED') status.append(node('span','state-label returned-label','Returned'));
   else if(patient.queue_state==='TRANSFERRED') status.append(node('span','state-label transferred-label','Transferred'));
   else status.append(node('span','sr-only','Waiting'));

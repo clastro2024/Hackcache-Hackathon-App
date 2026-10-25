@@ -11,11 +11,14 @@
 .patients-page .demo-label { border-inline-end: 1px solid var(--color-border-subtle); padding-inline-end: 1.5rem; }
 .patients-shell { max-width: 100rem; padding: 0 1.75rem 1.75rem; }
 .ledger { --position-width: 10.1%; --token-width: 11.5%; --patient-width: 23.1%; --status-width: 25%; min-height: calc(100dvh - 6.25rem); padding: .75rem; }
-.ledger-toolbar { display: grid; grid-template-columns: max-content minmax(18rem, 22rem) minmax(6rem, 1fr) max-content max-content; align-items: center; gap: 1rem; padding: .875rem .375rem 1.375rem; }
+.ledger-toolbar { display: grid; grid-template-columns: max-content 13rem minmax(6rem, 1fr) max-content max-content; align-items: center; gap: 1rem; padding: .875rem .375rem 1.375rem; }
 .ledger-toolbar h1 { font-size: calc(2.625rem * var(--ui-text-scale, 1)); font-weight: 600; line-height: 1.2; }
-.room-field { position: relative; min-width: 0; }
-.room-field select { min-height: 3.25rem; padding: .75rem 1rem; border-radius: .5rem; font-size: calc(1rem * var(--ui-text-scale, 1)); line-height: 1.5; text-align: start; }
-@supports (appearance: base-select) { .room-field select { display: flex; align-items: center; justify-content: space-between; } }
+.room-field { position: relative; width: 13rem; max-width: 100%; min-width: 0; }
+.room-field select { min-height: 3.25rem; padding: .75rem 2.75rem .75rem 1rem; border-radius: .5rem; background-image: none; font-size: calc(1rem * var(--ui-text-scale, 1)); line-height: 1.5; text-align: start; }
+.room-field::after { content: ""; position: absolute; inset-inline-end: 1rem; inset-block-start: 50%; width: 1.125rem; height: 1.125rem; pointer-events: none; transform: translateY(-50%); background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23165d66' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
+.room-field:has(select:open)::after { transform: translateY(-50%) rotate(180deg); }
+.room-field:has(select:disabled)::after { opacity: .5; }
+@supports (appearance: base-select) { .room-field select { display: flex; align-items: center; justify-content: space-between; } .room-field select::picker-icon { display: none; } }
 .toolbar-actions { display: flex; align-items: center; gap: .75rem; }
 .toolbar-actions .button { min-height: 3.25rem; border-radius: .375rem; padding-inline: 1rem; }
 .contact-time { font-size: calc(.875rem * var(--ui-text-scale, 1)); white-space: nowrap; text-align: end; }
@@ -40,10 +43,10 @@
 .ledger-current td:first-child { border-inline-start: 1px solid var(--color-border-subtle); border-radius: .5rem 0 0 .5rem; }
 .ledger-current td:last-child { border-inline-end: 1px solid var(--color-border-subtle); border-radius: 0 .5rem .5rem 0; }
 .ledger-table .numeric { font-size: calc(1.125rem * var(--ui-text-scale, 1)); color: var(--color-muted); }
-.ledger-current .numeric { color: var(--color-primary); font-weight: 700; }
+.ledger-current .numeric { color: var(--color-primary); font-weight: 600; }
 .token { font-weight: 600; font-size: calc(1.25rem * var(--ui-text-scale, 1)); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .patient-name { font-size: calc(1.25rem * var(--ui-text-scale, 1)); overflow-wrap: anywhere; }
-.ledger-current .token { font-size: calc(1.5625rem * var(--ui-text-scale, 1)); font-weight: 600; }
+.ledger-current .token, .ledger-current .numeric { font-size: calc(1.5625rem * var(--ui-text-scale, 1)); font-weight: 600; }
 .ledger-current .patient-name { font-size: calc(1.5rem * var(--ui-text-scale, 1)); font-weight: 600; line-height: 1.25; }
 .row-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .75rem; }
 .row-actions > .button { min-height: 3.5rem; border-radius: .375rem; font-size: calc(1rem * var(--ui-text-scale, 1)); padding-inline: 1.125rem; }
@@ -83,11 +86,14 @@
 .absent-row .row-actions { grid-column: 5; grid-row: 1; min-width: 0; padding: .75rem 1rem; }
 .absent-row .row-actions > .button { min-width: 9.5rem; min-height: 2.75rem; padding-inline: .75rem; }
 .absent-row .row-more { margin-inline-start: 0; }
+.absent-row .row-menu { inset-block-start: auto; inset-block-end: calc(100% + .375rem); }
+.absent-row .row-more > summary .icon { transform: rotate(180deg); }
+.absent-row .row-more[open] > summary .icon { transform: none; }
 .registration-sheet { width: min(32rem, calc(100% - 2rem)); margin: 1rem 1rem 1rem auto; max-height: calc(100dvh - 2rem); }
 @media (max-width: 90rem) { .ledger-current .row-actions > .button:first-child { min-width: 11.25rem; } .ledger-current .row-actions > .button--secondary { min-width: 10rem; } }
 @media (max-width: 82rem) { .toolbar-actions { gap: .5rem; } .toolbar-actions .button { padding-inline: .75rem; } .ledger-current .row-actions > .button:first-child, .ledger-current .row-actions > .button--secondary { min-width: 0; } .row-actions > .button { padding-inline: .75rem; } }
 @media (max-width: 78rem) {
-  .ledger-toolbar { grid-template-columns: max-content minmax(15rem, 1fr) max-content; gap: .75rem 1rem; }
+  .ledger-toolbar { grid-template-columns: max-content 13rem max-content; gap: .75rem 1rem; }
   .ledger-toolbar h1 { grid-column: 1; grid-row: 1; font-size: calc(2.375rem * var(--ui-text-scale, 1)); }
   .room-field { grid-column: 2; grid-row: 1; }
   .ledger-toolbar .status { grid-column: 3; grid-row: 1; max-width: 18rem; }
@@ -116,7 +122,7 @@
   .ledger-current td { padding-block: .5rem; }
   .ledger-current td, .ledger-current td:first-child, .ledger-current td:last-child { background: transparent; border: 0; border-radius: 0; }
   .ledger-table .numeric { font-size: calc(1rem * var(--ui-text-scale, 1)); }
-  .ledger-current .token { font-size: calc(1.5rem * var(--ui-text-scale, 1)); }
+  .ledger-current .token, .ledger-current .numeric { font-size: calc(1.5rem * var(--ui-text-scale, 1)); }
   .ledger-current .patient-name { font-size: calc(1.375rem * var(--ui-text-scale, 1)); }
   .patient-name { font-size: calc(1.125rem * var(--ui-text-scale, 1)); }
   .call-count { position: static; display: block; margin-block-start: .125rem; margin-inline-start: 1.875rem; }

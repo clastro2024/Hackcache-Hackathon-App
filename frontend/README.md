@@ -545,3 +545,47 @@ queue CSS/JS. No working patient data or backend source was modified.
 The browser's previously documented Kaspersky resource injection remains; these
 checks do not claim complete resource isolation, hosted qualification or accessibility
 conformance. Existing acceptance TODOs and API-dependent remaining scope are unchanged.
+
+## Compact selector and absent menu — 25 October 2026
+
+Supersedes the preceding wide-selector/petrol-position presentation. patients.css
+now fixes the room field at 9.5rem (152px, under half the previous 352px desktop
+width), retaining its native picker and responsive bounds. Current position 0 uses
+the same font size, weight and dark ink as the current token, including mobile.
+patients.js renders In consultation without the tick or staff-only explanatory
+sentence. The awaiting-arrival clock, call count and existing commands remain.
+
+Only absent-row menus now open above their trigger, with an upward closed chevron.
+Main queue menus retain their existing placement, and native disclosure/focus,
+Escape and outside dismissal behavior is preserved. No backend, dependency or
+working patient-data change was made.
+
+Environment/build/syntax/whitespace checks passed. The disposable real-HTTP/Chrome
+check passed three grouped layout/workflow scenarios at the same nine widths,
+verifying the 152px selector, matching token/0 typography, ink color, plain checked-in
+status, upward menus within desktop/mobile viewport bounds, Escape dismissal and
+actual pause/resume, return, repeat call and arrival. Desktop and mobile screenshots
+were inspected. The live preview served the updated CSS with HTTP 200. The previously
+documented browser injection and accessibility/hosting verification limits remain.
+
+Full regression result at this verification: 170 total, 165 passed, five TODOs,
+zero failures/skips/cancellations (42,584.9577 ms). Concurrent unrelated changes
+were preserved; this section changed only queue presentation and its documentation.
+
+## Room-selector sizing follow-up — 25 October 2026
+
+patients.css adjusts the room selector to 13rem (208px) and restores current position
+0 to brand petrol while retaining its larger size. A scoped decorative chevron is
+drawn independently of the browser picker icon, with reserved label space, disabled/
+open states and pointer-events:none. The underlying native select retains all form,
+keyboard and picker behavior; other selectors are unchanged.
+
+Environment/build/whitespace checks and three existing disposable browser workflow
+groups passed across nine viewport widths. The check verified the 208px width,
+petrol 0, visible arrow, a physical click on the arrow area opening the native
+picker, Escape dismissal and the retained queue actions. Desktop/mobile screenshots
+were inspected. No backend, dependencies, clinical contents or browser storage changed.
+
+The preview returned HTTP 200 with the new selector, chevron and color rules.
+Full npm test: 170 total, 165 passed, five TODOs, zero failures/skips/cancellations
+(44,320.4244 ms). Existing browser-environment and hosted-verification limits remain.
