@@ -348,6 +348,10 @@ export function showLoader({ brand = 'Vellum' } = {}) {
   } else {
     loader.classList.remove('is-hidden');
   }
+  const main = document.getElementById('main-content');
+  if (main && !main.classList.contains('workspace-entered')) {
+    main.classList.add('workspace-pending');
+  }
   return loader;
 }
 
@@ -359,12 +363,23 @@ export function hideLoader({ minDuration = 500 } = {}) {
 
   setTimeout(() => {
     const loader = document.getElementById('vellum-page-loader');
-    if (loader) {
-      loader.classList.add('is-hidden');
-    }
     const main = document.getElementById('main-content');
-    if (main && !main.classList.contains('workspace-entered')) {
-      main.classList.add('workspace-pop-in', 'workspace-entered');
+
+    const triggerWorkspaceEntrance = () => {
+      if (main && !main.classList.contains('workspace-entered')) {
+        main.classList.remove('workspace-pending');
+        main.classList.add('workspace-pop-in', 'workspace-entered');
+      }
+    };
+
+    if (loader && !loader.classList.contains('is-hidden')) {
+      loader.classList.add('is-hidden');
+      // The transparent-to-visible pop-up animation of the profile window
+      // triggers strictly when the loading screen fade-out animation ends.
+      const FADE_OUT_DURATION_MS = 320;
+      setTimeout(triggerWorkspaceEntrance, FADE_OUT_DURATION_MS);
+    } else {
+      triggerWorkspaceEntrance();
     }
   }, delay);
 }

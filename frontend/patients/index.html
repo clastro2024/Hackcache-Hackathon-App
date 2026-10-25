@@ -10,9 +10,10 @@
   <script type="module" src="./patients.js"></script>
 </head>
 <body class="patients-page">
+  <div id="vellum-page-loader" class="vellum-loader-overlay" role="status" aria-live="polite" aria-label="Loading Vellum…"><span class="vellum-loader-brand">Vellum</span></div>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div id="app-header"></div>
-  <main id="main-content" class="workspace patients-shell" tabindex="-1">
+  <main id="main-content" class="workspace patients-shell workspace-pending" tabindex="-1">
     <section class="panel ledger" aria-labelledby="patients-title">
       <div class="ledger-toolbar">
         <h1 id="patients-title">Patients</h1>
@@ -33,7 +34,7 @@
         <details id="absent-section" class="absent-section"><summary id="absent-count">Absent patients (0)</summary><div id="absent-rows" class="absent-rows"></div></details>
       </div>
     </section>
-    <noscript><p class="page-intro">JavaScript is needed to use the patient list. Ask hospital staff for assistance.</p></noscript>
+    <noscript><style>.vellum-loader-overlay{display:none!important}.workspace-pending{opacity:1!important;visibility:visible!important}</style><p class="page-intro">JavaScript is needed to use the patient list. Ask hospital staff for assistance.</p></noscript>
   </main>
   <section id="token-print" class="print-only" aria-label="Visit token"></section>
   <dialog id="assisted-sharing" class="dialog" aria-labelledby="assisted-title"><div class="dialog-head"><h2 id="assisted-title" class="dialog-title">Help with sharing choice</h2><button type="button" class="dialog-close" aria-label="Close assisted sharing" data-dialog-close>×</button></div><div class="dialog-body stack"><p id="assisted-patient" translate="no"></p><p class="field-help">Explain the request to the patient and record their actual choice. A printed reference or QR does not establish identity or consent.</p><div id="assisted-notice" aria-live="polite"></div><form id="assisted-form" class="stack" novalidate><fieldset class="assistance-checks"><legend>Confirm the assistance</legend><label><input id="assist-present" type="checkbox">The patient is present</label><label><input id="assist-identity" type="checkbox">I checked the patient’s visit details</label><label><input id="assist-choice" type="checkbox">I confirmed the patient’s choice</label></fieldset><div id="assisted-requests" class="stack"></div></form></div></dialog>
