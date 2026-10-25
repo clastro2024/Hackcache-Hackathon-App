@@ -1,7 +1,9 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, bindTabs, bindDialog, createNotice, setText, setFieldError, announce, icon, localizedText, localizeUI } from '../shared/ui.js';
+import { mountHeader, bindTabs, bindDialog, createNotice, setText, setFieldError, announce, icon, localizedText, localizeUI, showLoader, hideLoader } from '../shared/ui.js';
 import {hindiText} from '../shared/hindi.js';
+
+showLoader();
 
 const get=id=>document.getElementById(id),params=new URLSearchParams(location.search);
 const context=Object.fromEntries(['encounter_id','patient_id','room_id'].map(key=>[key,params.get(key)]));
@@ -130,6 +132,7 @@ async function poll() {
     if(needsDraft && !dirty && !pending.write) await loadDraft();
     if(!history && hasScope('triage:read')) await loadHistory();
     lock();showPending();
+    hideLoader();
   } catch(error) {
     if(!ended && !leaving) {clearPrivate();needsSession=true;notice('workspace-notice','Workspace unavailable','Protected content and unsent edits have been cleared. The page will check the server again.','caution',{label:'Try again',onClick:poll});showPending();}
   } finally {reading=false;schedule();}

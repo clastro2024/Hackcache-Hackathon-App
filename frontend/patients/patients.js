@@ -1,6 +1,8 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, createNotice, bindDialog, setFieldError, setText, announce, icon, localizeUI } from '../shared/ui.js';
+import { mountHeader, createNotice, bindDialog, setFieldError, setText, announce, icon, localizeUI, showLoader, hideLoader } from '../shared/ui.js';
+
+showLoader();
 
 const get=id=>document.getElementById(id);
 const roomSelect=get('room'),content=get('queue-content'),rows=get('queue-rows');
@@ -64,6 +66,7 @@ function clearPrivate() {
   get('command-notice').replaceChildren();lock();
 }
 function endContext(message) {
+  hideLoader();
   clearTimeout(timer);ended=true;pending=null;logoutIntent=null;actor=null;lastOutcome=null;versions.clear();clearPrivate();
   roomSelect.replaceChildren(node('option','','Sign-in required'));header();
   get('pause-queue').hidden=true;get('register-patient').hidden=true;
@@ -202,6 +205,7 @@ async function poll() {
     if(value.room_id!==selected || !Number.isSafeInteger(value.version) || !Array.isArray(value.waiting) || !Array.isArray(value.absent)) throw new Error('Invalid room snapshot');
     if(value.version<(versions.get(selected) ?? -1)) return;
     versions.set(selected,value.version);snapshot=value;get('connection-notice').replaceChildren();renderQueue(value);
+    hideLoader();
     if(get('assisted-sharing').open && !assistedReading && !pending) void loadAssisted();
     if(pending && !working) showPending();
     else if(lastOutcome && !working) notice('command-notice',lastOutcome.title,lastOutcome.message,lastOutcome.tone);

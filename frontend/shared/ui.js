@@ -325,3 +325,44 @@ export function setInterfaceLanguage(code) {
   initializeLanguage();
   window.dispatchEvent(new CustomEvent('vellum:languagechange',{detail:{language:code}}));
 }
+
+let loaderShownTime = 0;
+
+export function showLoader({ brand = 'Vellum' } = {}) {
+  loaderShownTime = Date.now();
+  let loader = document.getElementById('vellum-page-loader');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.id = 'vellum-page-loader';
+    loader.className = 'vellum-loader-overlay';
+    loader.setAttribute('role', 'status');
+    loader.setAttribute('aria-live', 'polite');
+    loader.setAttribute('aria-label', 'Loading Vellum…');
+    const logo = document.createElement('span');
+    logo.className = 'vellum-loader-brand';
+    setText(logo, brand);
+    loader.append(logo);
+    document.body.append(loader);
+  } else {
+    loader.classList.remove('is-hidden');
+  }
+  return loader;
+}
+
+export function hideLoader({ minDuration = 500 } = {}) {
+  const elapsed = Date.now() - loaderShownTime;
+  const delay = loaderShownTime > 0 && elapsed < minDuration ? minDuration - elapsed : 0;
+
+  setTimeout(() => {
+    const loader = document.getElementById('vellum-page-loader');
+    if (loader) {
+      loader.classList.add('is-hidden');
+    }
+    const main = document.getElementById('main-content');
+    if (main) {
+      main.classList.remove('workspace-pop-in');
+      void main.offsetWidth;
+      main.classList.add('workspace-pop-in');
+    }
+  }, delay);
+}

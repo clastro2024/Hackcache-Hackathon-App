@@ -1,6 +1,8 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, createNotice, setText, setFieldError, announce, icon, localizeUI } from '../shared/ui.js';
+import { mountHeader, createNotice, setText, setFieldError, announce, icon, localizeUI, showLoader, hideLoader } from '../shared/ui.js';
+
+showLoader();
 
 const get=id=>document.getElementById(id);
 let actor=null,visit=null,allowance=null,generation=0,reading=false,working=false,timer,expiryTimer;
@@ -44,6 +46,7 @@ function clearPrivate() {
   get('more-audit').hidden=true;get('record-details').open=false;lock();
 }
 function endContext(message) {
+  hideLoader();
   ended=true;clearTimeout(timer);pending=null;logoutIntent=null;actor=null;visitBinding=null;deadlines.clear();clearPrivate();header();
   notice('visit-notice','Sign in to continue',message,'caution',{label:'Go to sign in',onClick:()=>location.replace('../login/')});
 }
@@ -186,7 +189,9 @@ async function poll() {
     }
     get('patient-content').hidden=false;get('visit-notice').replaceChildren();setText(get('patient-name'),actor.display_name);
     renderVisit();
-    renderSharing();if(pending) pendingNotice();
+    renderSharing();
+    hideLoader();
+    if(pending) pendingNotice();
     else if(!working && get('choice-notice').querySelector('.notice--success')) get('choice-notice').replaceChildren();
     lock();
   } catch(error) {

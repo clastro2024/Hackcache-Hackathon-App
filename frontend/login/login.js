@@ -1,6 +1,6 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, createNotice, setText, icon } from '../shared/ui.js';
+import { mountHeader, createNotice, setText, icon, showLoader, hideLoader } from '../shared/ui.js';
 
 mountHeader(document.getElementById('app-header'), { area: 'utility' });
 const panel = document.getElementById('demo-account-panel');
@@ -28,9 +28,21 @@ async function chooseAccount(account, button) {
   button.setAttribute('aria-busy', 'true');
   checking.hidden = false;
   setText(checking, 'Signing in…');
+
+  // Trigger full-screen breathing logo loader
+  showLoader();
+
   try {
-    if (!continueToAccount(await session.signInDemo(account.username))) throw new Error('Unconfirmed sign-in');
+    const started = Date.now();
+    const result = await session.signInDemo(account.username);
+    // Allow at least 700ms so the breathing rhythm is smoothly experienced
+    const elapsed = Date.now() - started;
+    if (elapsed < 700) {
+      await new Promise(resolve => setTimeout(resolve, 700 - elapsed));
+    }
+    if (!continueToAccount(result)) throw new Error('Unconfirmed sign-in');
   } catch (error) {
+    hideLoader();
     const uncertain = error.commit_state === 'UNKNOWN' || error.retry_strategy === 'SAME_KEY';
     message(
       uncertain ? 'Sign-in not confirmed' : 'Unable to sign in',
