@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Sign in · VaultMed</title>
+  <title>Sign in · Vellum</title>
   <link rel="stylesheet" href="../assets/css/tailwind.css">
   <link rel="stylesheet" href="./login.css">
   <script type="module" src="./login.js"></script>
@@ -15,27 +15,14 @@
   <main id="main-content" class="workspace login-shell" tabindex="-1">
     <div class="page-heading">
       <h1>Sign in</h1>
-      <p class="page-intro">Use your assigned account to continue.</p>
+      <p class="page-intro">Choose a demo account to continue.</p>
     </div>
     <div id="login-notice" class="login-notice" aria-live="polite"></div>
     <p id="session-check" class="status" role="status"><span class="status-dot" aria-hidden="true"></span>Checking your session…</p>
-    <form id="login-form" class="panel stack" hidden novalidate>
-      <div class="field">
-        <label class="field-label" for="username">Username</label>
-        <input id="username" class="field-control" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="80" required>
-        <p id="username-error" class="field-error" hidden></p>
-      </div>
-      <div class="field">
-        <label class="field-label" for="password">Password</label>
-        <div class="password-control">
-          <input id="password" class="field-control" name="password" type="password" autocomplete="current-password" maxlength="256" required>
-          <button id="password-toggle" type="button" class="password-toggle" aria-controls="password" aria-pressed="false">Show</button>
-        </div>
-        <p id="password-error" class="field-error" hidden></p>
-      </div>
-      <p class="field-help">Ask your setup operator if you do not have an assigned account.</p>
-      <button id="sign-in" class="button" type="submit"><span data-button-label>Sign in</span></button>
-    </form>
+    <section id="demo-account-panel" class="panel" aria-label="Demo accounts" hidden>
+      <div id="demo-accounts" class="demo-account-list"></div>
+      <p class="field-help demo-account-note">All accounts and records in this demo are synthetic.</p>
+    </section>
     <noscript><p class="page-intro">JavaScript is needed to sign in and use this application. Ask hospital staff for assistance.</p></noscript>
   </main>
 </body>

@@ -1,6 +1,7 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, bindTabs, bindDialog, createNotice, setText, setFieldError, announce, icon } from '../shared/ui.js';
+import { mountHeader, bindTabs, bindDialog, createNotice, setText, setFieldError, announce, icon, localizedText, localizeUI } from '../shared/ui.js';
+import {hindiText} from '../shared/hindi.js';
 
 const get=id=>document.getElementById(id),params=new URLSearchParams(location.search);
 const context=Object.fromEntries(['encounter_id','patient_id','room_id'].map(key=>[key,params.get(key)]));
@@ -75,7 +76,7 @@ function clearHistory() {
   historyEpoch+=1;history=null;historyDeadline=0;grantKey='';clearTimeout(expiryTimer);
   for(const id of ['allergies','history-groups','answer','question-feedback','check-result','source-content']) get(id).replaceChildren();
   get('answer').append(node('p','muted','Ask a supported question to see a sourced answer.'));
-  get('question').value='Penicillin allergy history?';get('history-content').hidden=true;dialogs.source.close();
+  get('question').value=localizedText('Penicillin allergy history?');get('history-content').hidden=true;dialogs.source.close();
   document.getElementById('encounter-print')?.replaceChildren();
   get('item-target').replaceChildren();
   // Source-linked edits are protected by the history grant, unlike new-care notes.
@@ -521,7 +522,7 @@ get('show-summary').addEventListener('click',async()=>{
 function contextForClinical() {return {patient_id:context.patient_id,encounter_id:context.encounter_id};}
 get('question-form').addEventListener('submit',async event=>{
   event.preventDefault();if(!hasScope('vault:query') || pending.history) return;
-  const text=get('question').value.trim();setFieldError(get('question'),get('question-error'),text?'':'Enter a supported question.');
+  const entered=get('question').value.trim(),text=questions.find(question=>entered===question||entered===hindiText(question))??entered;setFieldError(get('question'),get('question-error'),text?'':'Enter a supported question.');
   if(!text) {get('question').focus();return;}
   get('answer').replaceChildren(node('p','muted','Waiting for the answer…'));
   const interpret=get('interpret-question').checked;
@@ -563,7 +564,12 @@ window.addEventListener('pagehide',()=>{clearTimeout(timer);clearPrivate();api.c
 window.addEventListener('pageshow',event=>{if(event.persisted) location.reload();});
 window.addEventListener('beforeunload',event=>{if(dirty || Object.values(pending).some(Boolean)) {event.preventDefault();event.returnValue='';}});
 get('history-tabs') && bindTabs(get('history-tabs'));
-for(const question of questions) {const option=node('option');option.value=question;get('supported-questions').append(option);}
+function syncQuestionLanguage() {
+  const entered=get('question').value,canonical=questions.find(question=>entered===question||entered===hindiText(question));
+  if(canonical)get('question').value=localizedText(canonical);
+  get('supported-questions').replaceChildren(...questions.map(question=>{const option=node('option');option.value=localizedText(question);return option;}));
+}
+window.addEventListener('vellum:languagechange',syncQuestionLanguage);syncQuestionLanguage();
 for(const [type,label] of Object.entries(names)) {const option=node('option','',label);option.value=type;get('item-type').append(option);}
 for(const close of document.querySelectorAll('.dialog-close')) close.append(icon('close'));
 for(const id of ['ask-question','optional-check']) get(id).dataset.lane='history';
@@ -581,11 +587,11 @@ async function reviewedOutput(mode) {
     if(epoch!==generation || access!==historyEpoch || !hasScope('summary:export') || document.hidden) return;
     if(mode==='download') {
       const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/fhir+json'})),link=node('a');
-      link.href=url;link.download=`vaultmed-reviewed-${crypto.randomUUID()}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      link.href=url;link.download=`vellum-reviewed-${crypto.randomUUID()}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
     } else {
-      encounterPrint.replaceChildren(node('h1','','Reviewed visit summary'),node('p','',value.patient_display_name),node('p','',`Reviewed by ${value.review.reviewer_display_name} · ${new Date(value.review.reviewed_at).toLocaleString()}`),node('p','source-copy',value.reviewed_text));
+      encounterPrint.replaceChildren(node('h1','','Reviewed visit summary'),node('p','patient-name',value.patient_display_name),node('p','',`Reviewed by ${value.review.reviewer_display_name} · ${new Date(value.review.reviewed_at).toLocaleString()}`),node('p','source-copy',value.reviewed_text));
       for(const statement of value.statements) encounterPrint.append(node('p','source-copy',statement.display_text));
-      for(const warning of value.warnings) encounterPrint.append(node('p','field-help',warning));window.print();
+      for(const warning of value.warnings) encounterPrint.append(node('p','field-help',warning));localizeUI(encounterPrint);window.print();
     }
     notice('save-feedback',mode==='download'?'Download prepared':'Print summary prepared','The output covers the committed reviewed batch. Official FHIR validation has not been run.','info');
   } catch(error) {if(epoch===generation && !ended) notice('save-feedback','Reviewed output unavailable',errorMessage(error));}

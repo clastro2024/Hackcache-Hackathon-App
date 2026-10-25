@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Patient Visit · VaultMed</title>
+  <title>Patient Visit · Vellum</title>
   <link rel="stylesheet" href="../assets/css/tailwind.css">
   <link rel="stylesheet" href="./patient-visit.css">
   <script type="module" src="./patient-visit.js"></script>
@@ -15,8 +15,23 @@
   <main id="main-content" class="workspace patient-workspace" tabindex="-1">
     <div id="visit-notice" class="visit-notice" aria-live="polite"><p class="muted">Checking your session…</p></div>
     <div id="patient-content" hidden>
-      <div class="visit-heading"><h1>Your visit</h1><p id="patient-name" class="visit-patient"></p><p id="visit-reference" class="muted"></p></div>
+      <div class="visit-heading"><h1 id="visit-title">Your visit</h1><p id="patient-name" class="visit-patient"></p><p id="visit-reference" class="muted"></p></div>
       <div id="choice-notice" class="visit-notice" aria-live="polite"></div>
+      <section id="queued-visit" class="queued-visit" aria-labelledby="queue-token-label" hidden>
+        <div class="visit-token-card">
+          <div class="visit-token-heading"><img class="visit-ticket-icon" src="../assets/icons/ticket.svg" alt="" width="56" height="56"><div><h2 id="queue-token-label" class="muted">Your token</h2><p id="visit-token" class="visit-token-value" translate="no"></p></div></div>
+          <div class="visit-token-details">
+            <div class="visit-token-detail"><img src="../assets/icons/map-pin.svg" alt="" width="28" height="28"><div><p class="visit-detail-value">Outpatient</p><p class="muted">Visit type</p></div></div>
+            <div class="visit-token-detail"><img src="../assets/icons/door-open.svg" alt="" width="28" height="28"><div><p id="visit-room" class="visit-detail-value" translate="no"></p><p class="muted">Room</p></div></div>
+          </div>
+        </div>
+        <p id="queue-guidance" class="queue-guidance" aria-live="polite"></p>
+        <p id="queue-paused" class="field-help" hidden>The room is on break. Ask staff for updates.</p>
+        <button id="show-directions" class="button queue-directions-trigger" type="button" aria-controls="visit-directions" aria-expanded="false"><img class="queue-direction-pin" src="../assets/icons/map-pin.svg" alt="" width="24" height="24">Show directions</button>
+        <p class="field-help queue-map-note">Fictional sample map, not surveyed. Ask hospital staff for directions and assistance.</p>
+        <section id="visit-directions" class="visit-directions" aria-labelledby="directions-title" hidden><h2 id="directions-title">Sample step-free directions from entrance</h2><div id="directions-content" aria-live="polite"></div></section>
+      </section>
+      <div id="consultation-content">
       <section id="sharing" class="sharing-region" aria-label="Record sharing"></section>
       <section id="visit-summary" class="visit-summary" aria-labelledby="summary-title">
         <h2 id="summary-title">Visit summary</h2>
@@ -25,6 +40,7 @@
         <div class="summary-actions no-print"><button id="view-summary" class="text-link" type="button" disabled>View reviewed summary</button><button id="print-summary" class="text-link" type="button" hidden>Print summary</button></div>
       </section>
       <p class="summary-independence">Your summary stays available when sharing ends.</p>
+      </div>
       <details id="record-details" class="record-details no-print"><summary>Your record and access history</summary><div class="stack">
         <p class="muted">See recorded access and choices for your own fictional patient record.</p>
         <div class="support-actions"><button id="load-audit" class="button button--secondary" type="button">View access history</button><button id="check-integrity" class="text-link" type="button">Check record integrity</button><button id="download-audit" class="text-link" type="button">Download access history</button><button id="download-fhir" class="text-link" type="button" disabled>Download visit record (JSON)</button></div>

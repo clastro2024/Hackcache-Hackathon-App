@@ -49,6 +49,8 @@ After explicit initialization below, run `npm start`. The example configuration 
 
 Implemented auth routes are `POST /api/v1/auth/login`, `GET /api/v1/auth/session` and `POST /api/v1/auth/logout`. POST requires JSON, the exact configured frontend Origin and a UUID X-Idempotency-Key; authenticated POST also requires the session's X-CSRF-Token. Login returns safe actor metadata, absolute expiry and page-memory CSRF. The opaque cookie is HttpOnly/SameSite=Strict/host-only and Secure except explicit loopback HTTP. GET session never renews the two-hour deadline. [API notes](docs/API.md) list the implemented clinical, queue, consent, telemetry and optional text routes. Legacy bypass routes remain unavailable.
 
+The browser sign-in page selects from seven fixed synthetic accounts using `GET /api/v1/auth/demo/accounts` and `POST /api/v1/auth/demo/login`. This simulates identity for the verified fictional dataset, while preserving server sessions, role/object checks and separate consent. It does not verify real identities and must not be used with real patient data. Existing account records and private passwords are unchanged.
+
 ## Configuration and private data
 
 `.env.example` documents PORT, HOST, FRONTEND_ORIGIN, API_ORIGIN, VELLUM_DB_PATH, USE_MOCK_ASR, SARVAM_ENABLED, SARVAM_API_KEY, SARVAM_ACCESS_FILE and PUBLIC_API_BASE_URL. Keep `.env` private. Public defaults use loopback HTTP, mock voice and disabled text AI; the operator's current local configuration enables verified gated text. Do not paste provider keys into chat. No provider account, payment or request is needed for the default setup.

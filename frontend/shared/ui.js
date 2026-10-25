@@ -1,3 +1,4 @@
+import {hindiText,hindiDigits} from './hindi.js';
 // Presentation only: no requests, actor authority, clinical storage or business transitions.
 export function setText(element,value) {element.textContent=String(value ?? '');}
 export function clearOnContextChange(client,clear) {return client.onContextClear(()=>clear());}
@@ -146,7 +147,7 @@ let nextHeaderId=0;
 export function mountHeader(target,{area='provider',page='patients',accountLabel='Account',roleLabel='',onSignOut}={}) {
   const prefix=`header-${++nextHeaderId}`;
   const header=element('header','shell-header'),bar=element('div','shell-bar'),identity=element('div','shell-identity');
-  identity.append(element('span','brand','VaultMed'));
+  identity.append(element('span','brand','Vellum'));
   if(area==='provider') {
     const nav=element('nav','shell-navigation'),link=element('a','nav-link',page==='encounter'?'Patient list':'Patients');
     nav.setAttribute('aria-label','Main navigation');link.href='../patients/';link.prepend(icon(page==='encounter'?'back':'people'));
@@ -158,7 +159,7 @@ export function mountHeader(target,{area='provider',page='patients',accountLabel
   trigger.append(icon('person'),accountCopy,icon('chevron'));
   const menu=element('div','account-menu');menu.id=`${prefix}-account`;menu.hidden=true;
   account.append(trigger,menu);
-  const accountRegion=element('div','shell-account');accountRegion.append(element('span','demo-label','Fictional demo'),account);
+  const accountRegion=element('div','shell-account');accountRegion.append(element('span','demo-label','All synthetic data used for demo'),account);
   bar.append(identity,accountRegion);header.append(bar);target.replaceChildren(header);
   const disclosure=bindDisclosure(trigger,menu,{dismissOutside:true}),cleanups=[()=>disclosure.destroy()];
 
@@ -171,7 +172,7 @@ export function mountHeader(target,{area='provider',page='patients',accountLabel
     const controller=bindDialog(dialog);cleanups.push(()=>{controller.destroy();dialog.remove();});return controller;
   }
   const languageChoices=element('div','stack');
-  const language=utilityDialog('Language',[element('p','','Choose the interface language. Clinical records keep their original wording.'),languageChoices]);
+  const language=utilityDialog('Language',[element('p','','Choose the interface language. Names and unclear source text stay in their original wording.'),languageChoices]);
   for(const [code,label] of [['en','English'],['hi','हिन्दी']]) {
     const choice=element('button','button button--secondary',label);choice.type='button';choice.lang=code;choice.translate=false;
     choice.addEventListener('click',()=>{setInterfaceLanguage(code);for(const item of languageChoices.children) item.setAttribute('aria-pressed',String(item===choice));language.close();});
@@ -189,20 +190,39 @@ export function mountHeader(target,{area='provider',page='patients',accountLabel
   else {action('Language: English','globe',language);action('Help','help',help);menu.append(element('hr','menu-divider'));}
   if(onSignOut) {
     if(area==='patient') menu.append(element('p','field-help account-note','Signing out does not stop sharing. Use Stop sharing on your visit.'));
-    else if(roleLabel==='Clinician') menu.append(element('p','field-help account-note','Signing out cancels this clinician session’s pending sharing requests and ends its shared access.'));
     const signOut=element('button','menu-action','Sign out');signOut.type='button';signOut.prepend(icon('signOut'));
-    signOut.addEventListener('click',()=>{disclosure.close();onSignOut();});menu.append(signOut);
+    signOut.addEventListener('click',()=>{disclosure.close();onSignOut();});
+    if(roleLabel==='Clinician') {
+      const wrapper=element('div','sign-out-help'),info=element('button','sign-out-info'),tooltip=element('div','sign-out-tooltip','Signing out cancels this clinician session’s pending sharing requests and ends its shared access.');
+      tooltip.id=`${prefix}-sign-out-help`;tooltip.setAttribute('role','tooltip');tooltip.hidden=true;
+      info.type='button';info.setAttribute('aria-label','About signing out');info.setAttribute('aria-controls',tooltip.id);info.setAttribute('aria-expanded','false');info.append(icon('info'));
+      signOut.setAttribute('aria-describedby',tooltip.id);info.setAttribute('aria-describedby',tooltip.id);
+      let dismissed=false,pinned=false,hideTimer;
+      const show=()=>{if(!dismissed){tooltip.hidden=false;info.setAttribute('aria-expanded','true');}},hide=()=>{tooltip.hidden=true;info.setAttribute('aria-expanded','false');};
+      wrapper.addEventListener('mouseenter',()=>{clearTimeout(hideTimer);dismissed=false;show();});wrapper.addEventListener('mouseleave',()=>{hideTimer=setTimeout(()=>{if(!pinned&&!wrapper.matches(':hover')&&!wrapper.contains(document.activeElement))hide();},180);});
+      wrapper.addEventListener('focusin',show);wrapper.addEventListener('focusout',event=>{if(!wrapper.contains(event.relatedTarget)){hide();dismissed=false;}});
+      info.addEventListener('click',()=>{dismissed=false;pinned=!pinned;if(pinned)show();else hide();});
+      wrapper.addEventListener('keydown',event=>{if(event.key==='Escape'&&!tooltip.hidden){event.preventDefault();event.stopPropagation();dismissed=true;pinned=false;hide();}});
+      cleanups.push(()=>clearTimeout(hideTimer));
+      wrapper.append(signOut,info,tooltip);menu.append(wrapper);
+    } else menu.append(signOut);
   } else {const signIn=element('a','menu-action','Sign in');signIn.href='../login/';signIn.prepend(icon('person'));menu.append(signIn);}
   initializeLanguage();
   return ()=>{for(const cleanup of cleanups) cleanup();target.replaceChildren();};
 }
 
 // Only an interface-language preference is stored. Patient, session and clinical
-// data never enter browser storage. Record/source regions are excluded below.
+// data never enter browser storage. Only display text is localized; source values
+// and command payloads remain original. Names and unrecognized wording are retained.
 let languageCode='en',languageObserver;
-try {if(sessionStorage.getItem('vaultmed-interface-language')==='hi') languageCode='hi';} catch {}
+try {if(sessionStorage.getItem('vellum-interface-language')==='hi') languageCode='hi';} catch {}
 export function interfaceLanguage() {return languageCode;}
 const hindiUI={
+  'Today’s visit':'आज की मुलाक़ात','Your token':'आपका टोकन','Outpatient':'बाह्य रोगी','Visit type':'मुलाक़ात का प्रकार','Show directions':'रास्ता दिखाएँ',
+  'The room is on break. Ask staff for updates.':'कक्ष में अभी विराम है। जानकारी के लिए कर्मचारियों से पूछें।',
+  'Loading sample directions…':'नमूना मार्ग लोड हो रहा है…',
+  'Fictional sample map, not surveyed. Ask hospital staff for directions and assistance.':'यह काल्पनिक नमूना नक्शा है, सर्वेक्षण नहीं हुआ है। रास्ते और सहायता के लिए अस्पताल के कर्मचारियों से पूछें।',
+  'Sample directions are unavailable. Ask hospital staff for directions and assistance.':'नमूना मार्ग उपलब्ध नहीं है। रास्ते और सहायता के लिए अस्पताल के कर्मचारियों से पूछें।',
   'Account':'खाता','Main navigation':'मुख्य नेविगेशन','Patients':'मरीज़','Patient list':'मरीज़ों की सूची','Your visit':'आपकी मुलाक़ात','Fictional demo':'काल्पनिक डेमो','Fictional demo facility':'काल्पनिक डेमो सुविधा',
   'Language':'भाषा','Language: English':'भाषा: हिन्दी','Help':'सहायता','Sign out':'साइन आउट','Sign in':'साइन इन','Go to sign in':'साइन इन करें','Sign in to continue':'आगे बढ़ने के लिए साइन इन करें',
   'Choose the interface language. Clinical records keep their original wording.':'इंटरफ़ेस की भाषा चुनें। चिकित्सा रिकॉर्ड अपने मूल शब्दों में रहेंगे।',
@@ -252,22 +272,27 @@ const hindiUI={
   'Use optional text interpretation (six topics only)':'वैकल्पिक पाठ व्याख्या उपयोग करें (केवल छह विषय)','Consultation brief proposal':'परामर्श सार का प्रस्ताव','Use proposal as visit note':'प्रस्ताव को मुलाक़ात के नोट में उपयोग करें',
 };
 const originalUI=new WeakMap();
-const originalAttributes=new WeakMap(),translatedAttributes=['aria-label','placeholder','title'];
-const clinicalRegions='[translate="no"],script,style,textarea,#allergies,#answer,#history-groups,#medication-items,#other-items,#review-content,#source-content,#summary-content,#print-content,#encounter-print,#token-print,.patient-name,#patient-name,#assisted-patient';
+const originalAttributes=new WeakMap(),translatedAttributes=['aria-label','aria-valuetext','placeholder','title','data-label'];
+const clinicalRegions='script,style,[data-preserve-source],.patient-name,#patient-name';
 function uiTranslation(text) {
   if(languageCode==='en') return text;
-  if(hindiUI[text]) return hindiUI[text];
-  if(text.includes(' · ')) return text.split(' · ').map(part=>hindiUI[part] || part).join(' · ');
+  if(hindiUI[text]) return hindiDigits(hindiUI[text]);
+  if(text.includes(' · ')) return text.split(' · ').map(uiTranslation).join(' · ');
   const patterns=[[/^Sharing with (.+)$/u,'इनके साथ साझा: $1'],[/^Reviewed by (.+)$/u,'समीक्षा: $1'],[/^Calls made: (\d+) of (\d+)$/u,'कॉल: $2 में से $1'],[/^Absent patients \((\d+)\)$/u,'अनुपस्थित मरीज़ ($1)'],[/^More actions for token (.+)$/u,'टोकन $1 के लिए अन्य कार्रवाइयाँ'],[/^Close (.+)$/u,'बंद करें: $1'],[/^Ends at (.+)$/u,'समाप्ति: $1'],[/^Visit (.+)$/u,'मुलाक़ात $1']];
-  for(const [pattern,replacement] of patterns) if(pattern.test(text)) return text.replace(pattern,replacement);
-  return text;
+  patterns.push([/^Please wait near (.+)\.$/u,'कृपया $1 के पास प्रतीक्षा करें।'],[/^Your visit was transferred\. Please wait near (.+)\.$/u,'आपकी मुलाक़ात दूसरे कक्ष में स्थानांतरित हुई है। कृपया $1 के पास प्रतीक्षा करें।'],[/^Your return is confirmed\. Please wait near (.+)\.$/u,'आपकी वापसी की पुष्टि हो गई है। कृपया $1 के पास प्रतीक्षा करें।']);
+  for(const [pattern,replacement] of patterns) if(pattern.test(text)) return hindiText(text.replace(pattern,replacement));
+  return hindiText(text);
 }
+export function localizedText(value){return uiTranslation(String(value??''));}
+export function localizeUI(root){translateTree(root);}
 function translateTree(root) {
+  if(!root)return;
   const attributes=element=>{
-    if(element.closest(clinicalRegions)) return;
+    const protectedName=Boolean(element.closest(clinicalRegions));
     let originals=originalAttributes.get(element);
     if(!originals) {originals={};originalAttributes.set(element,originals);}
     for(const name of translatedAttributes) {
+      if(protectedName&&name!=='data-label')continue;
       if(!element.hasAttribute(name)) {delete originals[name];continue;}
       const text=element.getAttribute(name),prior=originals[name],original=prior && text===prior.translated?prior.original:text;
       const translated=uiTranslation(original);originals[name]={original,translated};
@@ -275,7 +300,7 @@ function translateTree(root) {
     }
   };
   const visit=textNode=>{
-    if(textNode.parentElement?.closest(clinicalRegions)) return;
+    if(textNode.parentElement?.closest(`${clinicalRegions},textarea`)) return;
     const text=textNode.nodeValue,prior=originalUI.get(textNode),original=prior && text===prior.translated?prior.original:text;
     const trimmed=original.trim(),translated=original.replace(trimmed,uiTranslation(trimmed));
     originalUI.set(textNode,{original,translated});if(text!==translated) textNode.nodeValue=translated;
@@ -293,9 +318,10 @@ function initializeLanguage() {
     languageObserver=new MutationObserver(records=>{for(const record of records) {if(record.type==='characterData' || record.type==='attributes') translateTree(record.target);else for(const child of record.addedNodes) translateTree(child);}});
     languageObserver.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:translatedAttributes});
   }
-  document.documentElement.lang=languageCode;translateTree(document.body);
+  document.documentElement.lang=languageCode;translateTree(document.body);translateTree(document.querySelector('title'));
 }
 export function setInterfaceLanguage(code) {
-  if(!['en','hi'].includes(code)) return;languageCode=code;try{sessionStorage.setItem('vaultmed-interface-language',code);}catch{}
+  if(!['en','hi'].includes(code)) return;languageCode=code;try{sessionStorage.setItem('vellum-interface-language',code);}catch{}
   initializeLanguage();
+  window.dispatchEvent(new CustomEvent('vellum:languagechange',{detail:{language:code}}));
 }

@@ -172,6 +172,7 @@ export const revokeAllowanceSchema=z.strictObject({grant_id:id,expected_grant_ve
 export const breakGlassSchema=z.strictObject({reason:requiredText(1000)});
 
 export const loginSchema = z.strictObject({ username:text(80), password:z.string().min(1).max(256) });
+export const demoLoginSchema=z.strictObject({username:z.enum(['staff','doctor12','doctor18','patient-a','patient-b','patient-c','patient-d'])});
 export const emptySchema = z.strictObject({});
 export const actorSchema = z.strictObject({account_id:id,role:z.enum(['STAFF','CLINICIAN','PATIENT']),display_name:text(100),
   room_ids:z.array(id).max(10),permissions:z.array(text(64)).max(20),patient_id:id.optional()});

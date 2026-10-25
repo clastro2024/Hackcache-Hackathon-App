@@ -13,6 +13,10 @@ const legacySessionCookie='vaultmed_session';
 const roomIdsSchema=z.array(id).max(10);
 const permissionsSchema=z.array(z.string()).max(20);
 const grantScopesSchema=z.array(z.enum(scopes)).max(5);
+// This prototype supports only the verified fictional opd-demo-v1 dataset.
+// Demo selection simulates identity; it does not verify a real person's identity.
+const demoActors=[['staff','staff_demo','STAFF'],['doctor12','clinician_12','CLINICIAN'],['doctor18','clinician_18','CLINICIAN'],
+  ['patient-a','account_patient_1','PATIENT'],['patient-b','account_patient_2','PATIENT'],['patient-c','account_patient_3','PATIENT'],['patient-d','account_patient_4','PATIENT']];
 const permissions = {
   STAFF:['intake:register','queue:operate','consent:assist'],
   CLINICIAN:['queue:operate','clinical:write','emergency:read'], PATIENT:['patient:self','consent:decide'],
@@ -51,6 +55,7 @@ export function createLimiter({limit,windowMs=60000,capacity=1000,now}) {
 export async function createAuth(store,settings,{now,hooks={}}) {
   const dummyHash=await argon2.hash(randomBytes(32).toString('base64url'),{...PASSWORD_OPTIONS,type:argon2.argon2id});
   const failures=createLimiter({limit:5,now});const sensitive=createLimiter({limit:60,now});
+  const demoAttempts=createLimiter({limit:30,now});
   // Reuse fixed SQL plans only. Every authorization gate still reads current rows.
   const queries={
     account:store.db.prepare(`SELECT account_id,username,role,patient_id,room_ids_json,permissions_json,registration_id,active
@@ -136,13 +141,36 @@ export async function createAuth(store,settings,{now,hooks={}}) {
       throw new ApiError('INVALID_CREDENTIALS');
     }
     failures.forget(pair);
+    return issueSession({account,normalized,key,ref});
+  }
+  function demoAccount(username) {
+    const fixed=demoActors.find(item=>item[0]===username);
+    if(!fixed || store.db.prepare('SELECT seed_label FROM schema_meta WHERE singleton=1').get()?.seed_label!=='opd-demo-v1') throw new ApiError('RESOURCE_UNAVAILABLE');
+    const account=store.db.prepare('SELECT account_id,password_hash,role,active FROM accounts WHERE username=?').get(username);
+    if(!account?.active || account.account_id!==fixed[1] || account.role!==fixed[2]) throw new ApiError('RESOURCE_UNAVAILABLE');
+    return account;
+  }
+  function demoAccounts() {
+    return store.runUnit(false,()=>demoActors.flatMap(([username])=>{
+      try {const account=demoAccount(username),value=actor(account.account_id);return [{username,role:value.role,display_name:value.display_name,room_ids:value.room_ids}];}
+      catch(error) {if(error.code==='RESOURCE_UNAVAILABLE')return [];throw error;}
+    }));
+  }
+  async function demoLogin({username,key,ref,sourceIp=''}) {
+    demoAttempts.hit(digest(sourceIp));
+    const account=store.runUnit(false,()=>demoAccount(username));
+    return issueSession({account,normalized:username,key,ref,demo:true});
+  }
+  async function issueSession({account,normalized,key,ref,demo=false}) {
+    const operation=demo?'POST /api/v1/auth/demo/login':'POST /api/v1/auth/login';
     const secret=randomBytes(32).toString('base64url');const newRef={secretHash:digest(secret)};
     const sessionId=`session_${randomUUID()}`;const csrfValue=randomBytes(32).toString('base64url');
-    const receiptKey={actor_id:account.account_id,operation:'POST /api/v1/auth/login',idempotency_key:key,
-      request_fingerprint:fingerprint({method:'POST',path:'/api/v1/auth/login',body:{username:normalized}})};
+    const receiptKey={actor_id:account.account_id,operation,idempotency_key:key,
+      request_fingerprint:fingerprint({method:'POST',path:operation.slice(5),body:{username:normalized}})};
     const result=await retryUnit(store,true,()=>{
       const time=now();const current=store.db.prepare('SELECT active,password_hash FROM accounts WHERE account_id=?').get(account.account_id);
       if(!current?.active || current.password_hash!==account.password_hash) throw new ApiError('INVALID_CREDENTIALS');
+      if(demo) demoAccount(normalized);
       actor(account.account_id); // current role/permission state before receipt retrieval.
       const receipt=findReceipt(store,receiptKey);
       if(receipt) {
@@ -163,7 +191,7 @@ export async function createAuth(store,settings,{now,hooks={}}) {
       const ctx=authenticate(newRef);const body={...safeSession(ctx),changed:true,replayed:false};
       try {
         appendAudit(store,{actor_id:account.account_id,patient_id:ctx.actor.patient_id ?? null,encounter_id:null,
-          operation:'AUTH_LOGIN',result:'SUCCESS',recorded_at:time,details:{session_id:sessionId,...(prior?{previous_session_id:prior.session_id}:{})}});
+          operation:demo?'AUTH_DEMO_LOGIN':'AUTH_LOGIN',result:'SUCCESS',recorded_at:time,details:{session_id:sessionId,...(prior?{previous_session_id:prior.session_id}:{})}});
       } catch {throw new ApiError('AUDIT_UNAVAILABLE');}
       putReceipt(store,receiptKey,{status:'SESSION_ISSUED',changed:true,session_id:sessionId,expires_at:body.expires_at},time);
       return {body,ref:newRef,cookie:sessionCookie(settings,secret,expires,time)};
@@ -211,13 +239,13 @@ export async function createAuth(store,settings,{now,hooks={}}) {
     }
     return {...ctx,encounter:found};
   }
-  return {login,authenticate,csrf,safeSession,endSession,encounter,
+  return {login,demoLogin,demoAccounts,authenticate,csrf,safeSession,endSession,encounter,
     room:(ref,roomId,permission)=>{const ctx=authenticate(ref);return {...ctx,room:room(ctx,roomId,permission)};},
     ownPatient:(ref,patientId)=>{const ctx=authenticate(ref);if(ctx.actor.role!=='PATIENT' || ctx.actor.patient_id!==patientId ||
       !ctx.actor.permissions.includes('patient:self')) throw new ApiError('RESOURCE_UNAVAILABLE');return ctx;},
     status:ref=>store.runUnit(false,()=>{try{return safeSession(authenticate(ref));} catch(error) {
       if(['AUTH_REQUIRED','SESSION_ENDED'].includes(error.code)) return {authenticated:false,actor:null};throw error;}}),
     admitSensitive:ref=>{const ctx=store.runUnit(false,()=>authenticate(ref));sensitive.hit(ctx.actor.account_id);},
-    get limiterSize(){return failures.size;},close(){failures.clear();sensitive.clear();},
+    get limiterSize(){return failures.size;},close(){failures.clear();sensitive.clear();demoAttempts.clear();},
   };
 }

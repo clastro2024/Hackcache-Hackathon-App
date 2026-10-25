@@ -11,14 +11,17 @@
 .patients-page .demo-label { border-inline-end: 1px solid var(--color-border-subtle); padding-inline-end: 1.5rem; }
 .patients-shell { max-width: 100rem; padding: 0 1.75rem 1.75rem; }
 .ledger { --position-width: 10.1%; --token-width: 11.5%; --patient-width: 23.1%; --status-width: 25%; min-height: calc(100dvh - 6.25rem); padding: .75rem; }
-.ledger-toolbar { display: grid; grid-template-columns: max-content 13rem minmax(6rem, 1fr) max-content max-content; align-items: center; gap: 1rem; padding: .875rem .375rem 1.375rem; }
-.ledger-toolbar h1 { font-size: calc(2.625rem * var(--ui-text-scale, 1)); font-weight: 600; line-height: 1.2; }
+.ledger-toolbar { display: grid; grid-template-columns: max-content 13rem minmax(6rem, 1fr) max-content max-content; align-items: center; gap: 1rem; padding: .875rem 0 1.375rem; }
+.ledger-toolbar h1 { font-size: calc(2.625rem * var(--ui-text-scale, 1)); font-weight: 600; line-height: 1.2; text-indent: -.0625em; }
 .room-field { position: relative; width: 13rem; max-width: 100%; min-width: 0; }
 .room-field select { min-height: 3.25rem; padding: .75rem 2.75rem .75rem 1rem; border-radius: .5rem; background-image: none; font-size: calc(1rem * var(--ui-text-scale, 1)); line-height: 1.5; text-align: start; }
 .room-field::after { content: ""; position: absolute; inset-inline-end: 1rem; inset-block-start: 50%; width: 1.125rem; height: 1.125rem; pointer-events: none; transform: translateY(-50%); background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23165d66' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat; }
 .room-field:has(select:open)::after { transform: translateY(-50%) rotate(180deg); }
 .room-field:has(select:disabled)::after { opacity: .5; }
-@supports (appearance: base-select) { .room-field select { display: flex; align-items: center; justify-content: space-between; } .room-field select::picker-icon { display: none; } }
+@supports (appearance: base-select) {
+  .room-field select { display: flex; align-items: center; justify-content: space-between; }
+  .room-field select::picker-icon, .room-field option::checkmark { display: none; }
+}
 .toolbar-actions { display: flex; align-items: center; gap: .75rem; }
 .toolbar-actions .button { min-height: 3.25rem; border-radius: .375rem; padding-inline: 1rem; }
 .contact-time { font-size: calc(.875rem * var(--ui-text-scale, 1)); white-space: nowrap; text-align: end; }
@@ -52,6 +55,9 @@
 .row-actions > .button { min-height: 3.5rem; border-radius: .375rem; font-size: calc(1rem * var(--ui-text-scale, 1)); padding-inline: 1.125rem; }
 .row-actions > .button:first-child { min-width: 12.5rem; }
 .ledger-current .row-actions > .button--secondary { min-width: 10.875rem; }
+.encounter-actions { flex-wrap: nowrap; }
+.ledger-current .row-actions.encounter-actions > .button { min-width: 0; }
+.encounter-actions .current-menu { flex-shrink: 0; margin: 0; }
 .state-label { display: inline-block; border-radius: .5rem; padding: .25rem .875rem; background: var(--color-tint); color: var(--color-primary); font-size: calc(.9375rem * var(--ui-text-scale, 1)); font-weight: 500; line-height: 1.5; }
 .transferred-label { color: var(--color-muted); background: var(--color-info-bg); }
 .status-cell { position: relative; }
@@ -61,7 +67,8 @@
 .consultation-state { color: var(--color-primary); }
 .call-count { position: absolute; inset-block-start: calc(50% + .875rem); inset-inline-start: 2.875rem; inset-inline-end: 1rem; color: var(--color-muted); font-size: calc(.9375rem * var(--ui-text-scale, 1)); line-height: 1.4; }
 .row-more { position: relative; width: fit-content; margin-inline-start: auto; }
-.row-more > summary { display: inline-flex; justify-content: center; align-items: center; gap: .5rem; min-width: 2.75rem; min-height: 2.75rem; padding-inline: .625rem; border-radius: .5rem; color: var(--color-primary); font-weight: 500; list-style: none; }
+/* Offset the end padding and chevron whitespace; retain the full click target. */
+.row-more > summary { display: inline-flex; justify-content: center; align-items: center; gap: .5rem; min-width: 2.75rem; min-height: 2.75rem; padding-inline: .625rem; margin-inline-end: -.875rem; border-radius: .5rem; color: var(--color-primary); font-weight: 500; list-style: none; }
 .row-more > summary .icon { width: 1rem; height: 1rem; }
 .row-more[open] > summary .icon { transform: rotate(180deg); }
 .row-more > summary::-webkit-details-marker { display: none; }
@@ -69,7 +76,7 @@
 .row-more[open] > summary { background: var(--color-tint); }
 .row-more .row-menu { position: absolute; inset-block-start: calc(100% + .375rem); inset-inline-end: 0; z-index: 15; width: min(19rem, calc(100vw - 4rem)); gap: .5rem; margin: 0; padding: .75rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-floating); }
 .current-menu { margin-block-start: .25rem; }
-.current-menu > summary { min-height: 2.25rem; }
+.current-menu > summary { min-height: 2.25rem; margin-inline-end: -.9375rem; }
 .ledger-current .actions-cell { padding-block: .5rem; }
 .row-more p { max-width: 32ch; font-size: calc(.875rem * var(--ui-text-scale, 1)); }
 .empty-queue { padding: 2rem 1rem; color: var(--color-muted); }
@@ -93,7 +100,7 @@
 @media (max-width: 90rem) { .ledger-current .row-actions > .button:first-child { min-width: 11.25rem; } .ledger-current .row-actions > .button--secondary { min-width: 10rem; } }
 @media (max-width: 82rem) { .toolbar-actions { gap: .5rem; } .toolbar-actions .button { padding-inline: .75rem; } .ledger-current .row-actions > .button:first-child, .ledger-current .row-actions > .button--secondary { min-width: 0; } .row-actions > .button { padding-inline: .75rem; } }
 @media (max-width: 78rem) {
-  .ledger-toolbar { grid-template-columns: max-content 13rem max-content; gap: .75rem 1rem; }
+  .ledger-toolbar { grid-template-columns: max-content 13rem minmax(0, 1fr); gap: .75rem 1rem; }
   .ledger-toolbar h1 { grid-column: 1; grid-row: 1; font-size: calc(2.375rem * var(--ui-text-scale, 1)); }
   .room-field { grid-column: 2; grid-row: 1; }
   .ledger-toolbar .status { grid-column: 3; grid-row: 1; max-width: 18rem; }
@@ -132,9 +139,10 @@
   .absent-row > .token, .absent-row > .patient-name { padding: .5rem; }
   .absent-row .row-actions { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; padding: .5rem; }
   .row-more { margin-inline-start: 0; }
+  .row-more > summary { margin-inline-end: 0; }
   .row-more .row-menu { inset-inline: 0 auto; }
 }
-@media (max-width: 40rem) { .patients-page .shell-bar { padding: .5rem 1rem; } .patients-page .brand { font-size: calc(1.375rem * var(--ui-text-scale, 1)); } .patients-page .nav-link { font-size: calc(.9375rem * var(--ui-text-scale, 1)); } .patients-page .account-trigger { font-size: calc(.9375rem * var(--ui-text-scale, 1)); } .patients-page .account-role { font-size: calc(.8125rem * var(--ui-text-scale, 1)); } .patients-shell { padding: .75rem 1rem 1rem; } .ledger { padding: .75rem; } .ledger-toolbar { grid-template-columns: minmax(0, 1fr); padding: .5rem .25rem 1.25rem; } .ledger-toolbar h1, .room-field, .ledger-toolbar .status, .contact-time, .toolbar-actions { grid-column: 1; grid-row: auto; } .ledger-toolbar h1 { font-size: calc(2.25rem * var(--ui-text-scale, 1)); } .ledger-toolbar .status { font-size: calc(1rem * var(--ui-text-scale, 1)); } .contact-time { white-space: normal; font-size: calc(.75rem * var(--ui-text-scale, 1)); } .toolbar-actions { width: 100%; flex-wrap: wrap; gap: .5rem; } .toolbar-actions .button { flex: 1 1 9rem; padding-inline: .625rem; white-space: nowrap; } .registration-sheet { width: calc(100% - 1.5rem); margin: auto auto .75rem; max-height: calc(100dvh - 1.5rem); } }
+@media (max-width: 40rem) { .patients-page .shell-bar { padding: .5rem 1rem; } .patients-page .brand { font-size: calc(1.375rem * var(--ui-text-scale, 1)); } .patients-page .nav-link { font-size: calc(.9375rem * var(--ui-text-scale, 1)); } .patients-page .account-trigger { font-size: calc(.9375rem * var(--ui-text-scale, 1)); } .patients-page .account-role { font-size: calc(.8125rem * var(--ui-text-scale, 1)); } .patients-shell { padding: .75rem 1rem 1rem; } .ledger { padding: .75rem; } .ledger-toolbar { grid-template-columns: minmax(0, 1fr); padding: .5rem 0 1.25rem; } .ledger-toolbar h1, .room-field, .ledger-toolbar .status, .contact-time, .toolbar-actions { grid-column: 1; grid-row: auto; } .ledger-toolbar h1 { font-size: calc(2.25rem * var(--ui-text-scale, 1)); } .ledger-toolbar .status { font-size: calc(1rem * var(--ui-text-scale, 1)); } .contact-time { white-space: normal; font-size: calc(.75rem * var(--ui-text-scale, 1)); } .toolbar-actions { width: 100%; flex-wrap: wrap; gap: .5rem; } .toolbar-actions .button { flex: 1 1 9rem; padding-inline: .625rem; white-space: nowrap; } .registration-sheet { width: calc(100% - 1.5rem); margin: auto auto .75rem; max-height: calc(100dvh - 1.5rem); } }
 .assistance-checks { display: grid; gap: .5rem; padding: 1rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); }
 .assistance-checks legend { padding-inline: .25rem; font-weight: 500; }
 .assistance-checks label { display: flex; align-items: center; gap: .75rem; min-height: 2.75rem; }

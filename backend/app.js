@@ -24,7 +24,7 @@ import { createSarvam,createClinicalAI } from './services/sarvam.js';
 const pages=['login','patients','encounter','patient-visit'];
 const operationKeySchema=z.uuid();
 const healthPaths=new Set(['/api/v1/health/live','/api/v1/health/ready']);
-const authPaths=new Set(['/api/v1/auth/login','/api/v1/auth/session','/api/v1/auth/logout']);
+const authPaths=new Set(['/api/v1/auth/login','/api/v1/auth/session','/api/v1/auth/logout','/api/v1/auth/demo/accounts','/api/v1/auth/demo/login']);
 const allowedHeaders=['content-type','x-csrf-token','x-idempotency-key'];
 const routeId='[A-Za-z0-9_-]{1,128}';
 const domainPaths=new RegExp(`^/api/v1/(?:queue/register|queue/(?:rooms|display)/${routeId}|queue/rooms/${routeId}/(?:call-next|pause|resume)|queue/tokens/${routeId}/(?:repeat-call|absent|recall|transfer|withdraw)|encounters/${routeId}/(?:check-in|complete|break-glass|allowance/(?:request|respond|clarify|status|revoke))|patients/me/visit|navigation/route)$`,'u');
@@ -74,7 +74,7 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory,aiOpti
   requireStorage(Number(process.versions.node.split('.')[0])===24,'NODE_24_REQUIRED');
   for(const root of ['frontend','assets']) await verifyPublicTree(path.join(APP_ROOT,root));
   for(const file of [...pages.flatMap(page=>[`frontend/${page}/index.html`,`frontend/${page}/${page}.js`,`frontend/${page}/${page}.css`]),
-    ...['api','session','ui','config'].map(name=>`frontend/shared/${name}.js`),'assets/css/tailwind.css']) {
+    ...['api','session','ui','hindi','config'].map(name=>`frontend/shared/${name}.js`),'assets/css/tailwind.css']) {
     const entry=await lstat(path.join(APP_ROOT,file));
     requireStorage(entry.isFile() && (file!=='assets/css/tailwind.css' || entry.size>0),'INVALID_PUBLIC_FILES');
   }
@@ -172,6 +172,11 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory,aiOpti
   };
   const intent=req=>({method:'POST',path:req.path,body:req.validated,key:req.get('X-Idempotency-Key'),csrf:req.get('X-CSRF-Token')});
   const ref=req=>cookieReference(req.get('Cookie'));
+  app.get('/api/v1/auth/demo/accounts',(req,res)=>json(res,{simulation:true,accounts:auth.demoAccounts()}));
+  app.post('/api/v1/auth/demo/login',postHeaders,body,validate(schemas.demoLoginSchema),async(req,res)=>{
+    const result=await auth.demoLogin({...req.validated,key:req.get('X-Idempotency-Key'),ref:cookieReference(req.get('Cookie')),sourceIp:req.socket.remoteAddress});
+    if(result.cookie) res.set('Set-Cookie',result.cookie);return json(res,result.body);
+  });
   app.post('/api/v1/auth/login',postHeaders,body,validate(loginSchema),async(req,res)=>{
     const result=await auth.login({...req.validated,key:req.get('X-Idempotency-Key'),ref:cookieReference(req.get('Cookie')),
       sourceIp:req.socket.remoteAddress});

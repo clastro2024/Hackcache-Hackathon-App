@@ -19,7 +19,7 @@ export function createSession(client=api,{now=Date.now,schedule=setTimeout,cance
     async recover(){return publish(await client.read('/auth/session'));},
     async signIn(username,password) {
       const normalized=username.trim().toLowerCase();
-      const intent=client.createIntent('/auth/login',{username,password},pendingLogin?.username===normalized?{key:pendingLogin.key}:{});
+      const intent=client.createIntent('/auth/login',{username,password},pendingLogin?.mode!=='demo'&&pendingLogin?.username===normalized?{key:pendingLogin.key}:{});
       try {const result=await client.command(intent);pendingLogin=null;return publish(result);}
       catch(error) {
         pendingLogin=error.commit_state==='UNKNOWN' || error.retry_strategy==='SAME_KEY'?{username:normalized,key:intent.key}:null;
@@ -30,6 +30,13 @@ export function createSession(client=api,{now=Date.now,schedule=setTimeout,cance
     async signOut() {
       const intent=client.createIntent('/auth/logout',{});
       const result=await client.command(intent);publish(result);return result;
+    },
+    async signInDemo(username) {
+      const same=pendingLogin?.mode==='demo'&&pendingLogin.username===username;
+      const intent=client.createIntent('/auth/demo/login',{username},same?{key:pendingLogin.key}:{});
+      try {const result=await client.command(intent);pendingLogin=null;publish(result);return result;}
+      catch(error) {pendingLogin=error.commit_state==='UNKNOWN'||error.retry_strategy==='SAME_KEY'?{mode:'demo',username,key:intent.key}:null;throw error;}
+      finally {client.forget(intent);}
     },
     get current(){return current;},
     subscribe(listener){listeners.add(listener);return ()=>listeners.delete(listener);},

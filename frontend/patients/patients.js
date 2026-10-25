@@ -1,6 +1,6 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, createNotice, bindDialog, setFieldError, setText, announce, icon } from '../shared/ui.js';
+import { mountHeader, createNotice, bindDialog, setFieldError, setText, announce, icon, localizeUI } from '../shared/ui.js';
 
 const get=id=>document.getElementById(id);
 const roomSelect=get('room'),content=get('queue-content'),rows=get('queue-rows');
@@ -125,13 +125,14 @@ function renderPatient(patient,current=false) {
     } else if(clinician()) {
       // The next page rechecks server authority; identifiers grant no access.
       const link=node('a','button','Open encounter');link.dataset.encounterLink=`../encounter/?${new URLSearchParams({encounter_id:patient.encounter_id,patient_id:patient.patient_id,room_id:roomId})}`;
+      controls.classList.add('encounter-actions');
       controls.append(link);
     }
   } else if(patient.queue_state==='RECALLED') status.append(node('span','state-label returned-label','Returned'));
   else if(patient.queue_state==='TRANSFERRED') status.append(node('span','state-label transferred-label','Transferred'));
   else status.append(node('span','sr-only','Waiting'));
   actions.append(controls);const more=canOperate()?moreActions(patient,current):null;
-  if(more && current) {more.classList.add('current-menu');actions.append(more);}
+  if(more && current) {more.classList.add('current-menu');if(controls.classList.contains('encounter-actions')) controls.append(more);else actions.append(more);}
   else if(more) controls.append(more);
   row.append(status,actions);return row;
 }
@@ -264,16 +265,16 @@ async function printToken(patient) {
   let route=null;
   try {route=await api.read('/navigation/route',{origin:'entrance',destination:room,accessibility:'STEP_FREE',language:document.documentElement.lang==='hi'?'hi':'en'});} catch { /* A plain token and staff guidance remain useful without a sample route. */ }
   if(epoch!==generation || ended || leaving || document.hidden || !snapshot) return;
-  region.replaceChildren(node('p','','VaultMed · Fictional visit token'),node('h1','numeric',patient.public_token),node('p','patient-name',patient.display_name),node('h2','',label));
+  region.replaceChildren(node('p','','Vellum · Fictional visit token'),node('h1','numeric',patient.public_token),node('p','patient-name',patient.display_name),node('h2','',label));
   if(route?.status==='ROUTE_AVAILABLE') {const list=node('ol');for(const step of route.steps) list.append(node('li','',step.instruction));region.append(node('h2','','Sample step-free directions from entrance'),list);}
   region.append(node('p','',route?.message || 'Ask hospital staff for directions and assistance.'),node('p','field-help','Fictional sample map, not surveyed. This token is a visit reference, not authentication or permission to read records.'),node('p','','For urgent care, speak to qualified staff now.'));
-  window.print();get('command-notice').replaceChildren();
+  localizeUI(region);window.print();get('command-notice').replaceChildren();
 }
 window.addEventListener('afterprint',()=>get('token-print').replaceChildren());
 function openAssisted(patient) {
   if(!staff() || !permitted('consent:assist') || !snapshot || pending || working || !patient.checked_in) return;
   assistedPatient=patient;assistedStatus=null;assistedSignature='';get('assisted-form').reset();get('assisted-requests').replaceChildren();
-  setText(get('assisted-patient'),`${patient.public_token} · ${patient.display_name}`);assistedDialog.open();void loadAssisted();
+  get('assisted-patient').replaceChildren(node('span','',patient.public_token),document.createTextNode(' · '),node('span','patient-name',patient.display_name));assistedDialog.open();void loadAssisted();
 }
 async function loadAssisted() {
   if(!assistedPatient || assistedReading || !get('assisted-sharing').open || pending || working) return;
@@ -327,7 +328,7 @@ function openDecision(kind,patient=null) {
   }[kind];
   if(!config) return;
   decisionForm.reset();setText(get('decision-title'),config[0]);setText(get('decision-copy'),config[1]);
-  setText(get('decision-patient'),patient?`${patient.public_token} · ${patient.display_name}`:snapshot.label);
+  if(patient)get('decision-patient').replaceChildren(node('span','',patient.public_token),document.createTextNode(' · '),node('span','patient-name',patient.display_name));else setText(get('decision-patient'),snapshot.label);
   setText(get('confirm-decision'),config[2]);get('reason-field').hidden=kind!=='withdraw';
   setFieldError(get('decision-reason'),get('reason-error'),'');
   decisionAction=()=>{

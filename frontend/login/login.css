@@ -1,8 +1,15 @@
-.login-shell { max-width: 34rem; margin-block: 3rem; }
+.login-shell { max-width: 40rem; margin-block: 1.5rem; }
 .login-notice:not(:empty) { margin-block-end: var(--space-6); }
-.login-shell form { gap: var(--space-6); }
-.password-control { position: relative; }
-.password-control input { padding-inline-end: 5rem; }
-.password-toggle { position: absolute; inset-inline-end: 0.5rem; inset-block: 0.25rem; min-width: 3.5rem; padding: var(--space-2); border-radius: var(--radius-sm); color: var(--color-primary); font-weight: 500; }
-.password-toggle:hover { background: var(--color-tint); }
-@media (max-width: 40rem) { .login-shell { margin-block: 1rem; } }
+.demo-account-list { display: grid; gap: 1.5rem; }
+.demo-account-group { display: grid; gap: .5rem; }
+.demo-account-group .section-label { margin-block-end: .25rem; }
+.demo-account-button { display: flex; align-items: center; gap: 1rem; width: 100%; min-height: 4rem; padding: .75rem 1rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); text-align: start; }
+.demo-account-button:hover:not(:disabled), .demo-account-button:focus-visible { border-color: var(--color-primary); background: var(--color-tint); }
+.demo-account-button > .icon { flex: 0 0 auto; color: var(--color-primary); }
+.demo-account-button > .icon:last-child { width: 1.125rem; transform: rotate(-90deg); }
+.demo-account-button:disabled { opacity: .65; }
+.demo-account-copy { display: grid; flex: 1; gap: .125rem; min-width: 0; }
+.demo-account-name, .demo-account-copy .patient-name { font-size: 1rem; font-weight: 500; }
+.demo-account-copy .muted { font-size: .875rem; }
+.demo-account-note { margin-block-start: 1.25rem; }
+@media (max-width: 40rem) { .login-shell { margin-block: .75rem; } .demo-account-button { padding-inline: .75rem; } }

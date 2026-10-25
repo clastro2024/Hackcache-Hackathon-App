@@ -101,6 +101,11 @@
   .account-copy { display: grid; gap: 0; min-width: 0; max-width: 18rem; line-height: 1.25; }
   .account-role { color: var(--color-muted); font-size: calc(0.875rem * var(--ui-text-scale, 1)); }
   .account-menu { position: absolute; inset-block-start: calc(100% + 0.5rem); inset-inline-end: 0; z-index: 20; width: min(18rem, calc(100vw - 2rem)); padding: var(--space-2); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-floating); }
+  .sign-out-help { position: relative; }
+  .sign-out-help .menu-action { padding-inline-end: 3.25rem; }
+  .sign-out-info { position: absolute; inset-inline-end: .375rem; inset-block-start: .125rem; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; color: var(--color-muted); border-radius: var(--radius-sm); }
+  .sign-out-info:hover, .sign-out-info:focus-visible { background: var(--color-tint); color: var(--color-primary); }
+  .sign-out-tooltip { position: absolute; inset-inline-end: 0; inset-block-start: calc(100% + .5rem); width: min(18rem, calc(100vw - 3rem)); padding: .875rem 1rem; border: 1px solid var(--color-border-control); border-radius: var(--radius-md); background: var(--color-ink); color: var(--color-on-primary); font-size: .875rem; line-height: 1.6; box-shadow: var(--shadow-floating); z-index: 25; }
   .menu-action { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: 3rem; padding: var(--space-3); border-radius: var(--radius-sm); color: var(--color-ink); text-align: start; text-decoration: none; }
   .menu-action:hover { background: var(--color-canvas); }
   .menu-action--danger { color: var(--color-danger); }
@@ -163,12 +168,12 @@
   .status[aria-busy="true"] .status-dot { animation: status-breathe var(--motion-breathe) ease-in-out infinite; }
   .dialog { width: min(36rem, calc(100% - 3rem)); max-height: calc(100dvh - 3rem); margin: auto; padding: 0; overflow: auto; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-xl); background: var(--color-surface); color: var(--color-ink); box-shadow: var(--shadow-floating); }
   .dialog::backdrop { background: rgb(29 43 42 / 30%); }
-  .dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-6); border-bottom: 1px solid var(--color-border-subtle); }
-  .dialog-title { padding-block: var(--space-2); }
+  .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: .5rem 1.5rem; border-bottom: 1px solid var(--color-border-subtle); }
+  .dialog-title { padding: 0; font-size: calc(1.125rem * var(--ui-text-scale, 1)); line-height: 1.4; }
   .dialog-body { padding: var(--space-6); }
   .dialog-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 2.75rem; height: 2.75rem; border-radius: var(--radius-sm); }
   .dialog-close:hover { background: var(--color-tint); }
-  .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); margin-block-start: var(--space-6); }
+  .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: var(--space-3); margin-block-start: var(--space-6); }
   .patient-surface { font-size: calc(1.125rem * var(--ui-text-scale, 1)); line-height: 1.75rem; }
   .patient-surface h1 { font-size: calc(1.75rem * var(--ui-text-scale, 1)); line-height: 2.25rem; }
   .patient-surface :where(.button, .account-trigger, .menu-action, .dialog-close, .text-link) { min-height: 3rem; }
@@ -207,7 +212,8 @@
   .workspace { padding: var(--space-6) var(--space-4); }
   .panel { padding: var(--space-4); }
   .dialog { width: calc(100% - 1.5rem); max-height: calc(100dvh - 1.5rem); margin: auto auto 0.75rem; }
-  .dialog-head, .dialog-body { padding: var(--space-4); }
+  .dialog-head { padding: .5rem 1rem; }
+  .dialog-body { padding: var(--space-4); }
 }
 
 @media (prefers-reduced-motion: reduce) {

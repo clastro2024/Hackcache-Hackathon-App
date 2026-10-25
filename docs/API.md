@@ -11,10 +11,14 @@ Use `credentials: include`. POST requires `Content-Type: application/json`, the 
 | GET /health/live | Minimal LIVE response without database work. |
 | GET /health/ready | Current clock/storage readiness; unavailable/draining returns 503. |
 | POST /auth/login | `{username, password}` for a privately initialized fixed account. Safe actor, CSRF, absolute expiry; cookie secret only in Set-Cookie. |
+| GET /auth/demo/accounts | Seven available fixed synthetic actors: username, role, display name and assigned rooms; `simulation: true`. |
+| POST /auth/demo/login | `{username}` selected from that fixed list in the verified `opd-demo-v1` dataset. Issues the same server session, CSRF and absolute expiry as credential login. |
 | GET /auth/session | Current safe actor/CSRF/original expiry or anonymous state; no renewal. |
 | POST /auth/logout | `{}`. Revoke this browser's session and its clinician access; patient logout preserves the sharing choice. |
 
 The session maximum is 7,200 seconds. Matching-cookie login replay does not issue another cookie. Lost-cookie replay verifies credentials, ends the orphan and returns 409 LOGIN_REAUTH_REQUIRED; the next deliberate login needs a fresh key. Credentials never enter receipts.
+
+The browser uses demo identity selection without password fields. This simulates identity for fictional accounts and is unsuitable for real patient data. Demo login is rate limited, uses the same Origin/idempotency checks and session audit transaction, and preserves server-resolved role/object permissions and separate consent. It neither creates accounts nor changes their private passwords. Credential login remains available through the API.
 
 ## Queue commands
 

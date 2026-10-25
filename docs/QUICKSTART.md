@@ -27,7 +27,7 @@ If this existing Windows checkout uses the optional private portable runtime, ru
 | `doctor12`, `doctor18` | Respective assigned-room queue and checked-in clinical encounters. |
 | `patient-a` through `patient-d` | Their own visit, sharing decisions and reviewed output. |
 
-Sign in at `/login/`. Provider accounts open `/patients/`; patient accounts open `/patient-visit/`. Clinical Encounter opens from the clinician's current checked-in patient. Use separate browser profiles or separate browsers for simultaneous staff/clinician/patient sessions; tabs in one profile share cookies.
+At `/login/`, click one of the seven synthetic demo accounts to sign in directly. This demo picker simulates identity; it is not suitable for real patient data. Initialization still sets private passwords for the retained credential-login API. Provider accounts open `/patients/`; patient accounts open `/patient-visit/`. Clinical Encounter opens from the clinician's current checked-in patient. Use separate browser profiles or separate browsers for simultaneous staff/clinician/patient sessions; tabs in one profile share cookies.
 
 ## Try the workflow
 

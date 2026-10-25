@@ -1,56 +1,78 @@
 .patient-visit-page { --ui-text-scale: .85; line-height: 1.55; }
-.patient-workspace { max-width: 44rem; padding: 1.75rem 1.5rem 2.75rem; }
+.patient-workspace { max-width: 44rem; padding: 1.25rem 1.5rem 1.75rem; }
 .patient-visit-page .shell-bar, .patient-visit-page .shell-utilities { max-width: 44rem; margin-inline: auto; }
-.patient-visit-page .shell-bar { padding: 1rem 1.5rem; }
-.patient-visit-page .shell-utilities { padding: .875rem 1.5rem; }
+.patient-visit-page .shell-bar { min-height: 3.5rem; padding: .25rem 1.5rem; }
+.patient-visit-page .shell-utilities { padding: .375rem 1.5rem; }
+.patient-visit-page .shell-utilities .button { min-height: 2.75rem; padding-block: .5rem; font-size: calc(1.0625rem * var(--ui-text-scale, 1)); }
 .patient-visit-page .demo-label { display: none; }
 .patient-visit-page .account-trigger > .icon:first-child { display: none; }
-.patient-visit-page .account-trigger { font-size: calc(1.125rem * var(--ui-text-scale, 1)); }
-.patient-visit-page .brand { font-size: calc(2rem * var(--ui-text-scale, 1)); }
+.patient-visit-page .account-trigger { font-size: calc(1rem * var(--ui-text-scale, 1)); }
+.patient-visit-page .brand { font-size: calc(1.75rem * var(--ui-text-scale, 1)); }
 .patient-visit-page .account-note { padding: .75rem; }
-.visit-heading { margin-block-end: 1.5rem; }
-.patient-visit-page .visit-heading h1 { font-size: calc(2.5rem * var(--ui-text-scale, 1)); line-height: 1.2; margin-block-end: .625rem; }
-.visit-patient { font-size: calc(1.5rem * var(--ui-text-scale, 1)); line-height: 1.4; margin-block-end: .375rem; }
-.visit-notice:not(:empty) { margin-block-end: 1.5rem; }
-.sharing-region { display: grid; gap: 1.5rem; }
-.sharing-request { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1.75rem; }
-.patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: calc(1.875rem * var(--ui-text-scale, 1)); line-height: 1.25; }
-.request-clinician { font-size: calc(1.5rem * var(--ui-text-scale, 1)); line-height: 1.4; margin-block: .875rem .125rem; }
-.request-facts { display: grid; gap: 1rem; margin-block: 1.25rem; }
+.visit-heading { margin-block-end: 1.25rem; }
+.patient-visit-page .visit-heading h1 { font-size: calc(2rem * var(--ui-text-scale, 1)); line-height: 1.2; margin-block-end: .5rem; }
+.visit-patient { font-size: calc(1.25rem * var(--ui-text-scale, 1)); line-height: 1.4; margin-block-end: .25rem; }
+.visit-notice:not(:empty) { margin-block-end: 1.25rem; }
+.visit-token-card { padding: 1.5rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); }
+.visit-token-heading { display: flex; align-items: flex-end; gap: 1.25rem; }
+.visit-ticket-icon { flex: 0 0 auto; margin-block-end: .5rem; }
+.visit-token-heading h2 { font-size: calc(1.25rem * var(--ui-text-scale, 1)); font-weight: 500; }
+.visit-token-value { font-size: clamp(2rem, 11vw, 3.75rem); font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.visit-token-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-block-start: 1.25rem; padding-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); }
+.visit-token-detail { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.visit-token-detail + .visit-token-detail { padding-inline-start: 1.25rem; border-inline-start: 1px solid var(--color-border-subtle); }
+.visit-token-detail img { flex: 0 0 auto; }
+.visit-detail-value { font-size: calc(1.25rem * var(--ui-text-scale, 1)); font-weight: 600; line-height: 1.4; }
+.visit-token-detail .muted { font-size: calc(1rem * var(--ui-text-scale, 1)); }
+.queue-guidance { margin-block: 1.25rem; font-size: calc(1.375rem * var(--ui-text-scale, 1)); }
+#queue-paused:not([hidden]) { margin-block: -.75rem 1.25rem; }
+.patient-visit-page .queue-directions-trigger { width: 100%; min-height: 3.5rem; gap: .75rem; font-size: calc(1.25rem * var(--ui-text-scale, 1)); }
+.queue-direction-pin { filter: brightness(0) invert(1); }
+.queue-directions-trigger > .icon:last-child { margin-inline-start: .25rem; transform: rotate(180deg); }
+.queue-map-note { margin-block-start: .75rem; }
+.visit-directions { margin-block-start: 1.25rem; padding-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); }
+.visit-directions h2 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); margin-block-end: .75rem; }
+.visit-directions ol { list-style: decimal; padding-inline-start: 1.5rem; }
+.visit-directions li + li { margin-block-start: .75rem; }
+.visit-directions p { margin-block-start: .75rem; }
+.sharing-region { display: grid; gap: 1.25rem; }
+.sharing-request { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1.25rem; }
+.patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: calc(1.5rem * var(--ui-text-scale, 1)); line-height: 1.25; }
+.request-clinician { font-size: calc(1.25rem * var(--ui-text-scale, 1)); line-height: 1.4; margin-block: .625rem .125rem; }
+.request-facts { display: grid; gap: .75rem; margin-block: 1rem; }
 .request-facts dt { color: var(--color-muted); font-weight: 600; margin-block-end: .25rem; }
 .request-facts dd { margin: 0; }
-.decision-buttons { display: flex; gap: 1rem; }
-.decision-buttons .button { flex: 1; border-color: var(--color-primary); color: var(--color-ink); }
-.ask-why { margin-block-start: .5rem; }
+.decision-buttons { display: flex; gap: .75rem; }
+.decision-buttons .button { flex: 1; min-height: 3rem; border-color: var(--color-primary); color: var(--color-ink); }
+.ask-why { margin-block-start: .25rem; }
 .ask-why-form { margin-block-start: 1rem; }
-.request-deadline { margin-block-start: 1rem; font-size: calc(.9375rem * var(--ui-text-scale, 1)); color: var(--color-muted); }
-.sharing-active { display: grid; grid-template-columns: 2.75rem minmax(0,1fr) auto; align-items: center; gap: .875rem; padding: 1.25rem; border-radius: var(--radius-md); background: var(--color-tint); }
-.sharing-mark { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--color-primary); color: var(--color-on-primary); }
+.request-deadline { margin-block-start: .5rem; font-size: calc(.9375rem * var(--ui-text-scale, 1)); color: var(--color-muted); }
+.sharing-active { display: grid; grid-template-columns: 2.5rem minmax(0,1fr) auto; align-items: center; gap: .75rem; padding: 1rem; border-radius: var(--radius-md); background: var(--color-tint); }
+.sharing-mark { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--color-primary); color: var(--color-on-primary); }
 .sharing-active h2 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); line-height: 1.4; }
 .sharing-active .button { min-height: 3rem; font-size: calc(1rem * var(--ui-text-scale, 1)); padding-inline: .875rem; }
-.sharing-scopes { margin-block-start: .375rem; font-size: calc(1rem * var(--ui-text-scale, 1)); }
-.sharing-empty { border-block-start: 1px solid var(--color-border-subtle); padding-block: 1.5rem 0; }
-.sharing-empty h2 { margin-block-end: .5rem; }
-.visit-summary { margin-block-start: 1.5rem; padding-block-start: 1.5rem; border-block-start: 1px solid var(--color-border-subtle); }
-.visit-summary h2 { margin-block-end: 1rem; }
-.visit-summary.has-summary { border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); padding: 1.5rem; }
-.summary-review { color: var(--color-muted); }
-.summary-section { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1.25rem; margin-block-start: 1.25rem; }
-.summary-section h3 { font-size: calc(1.375rem * var(--ui-text-scale, 1)); margin-block-end: .625rem; }
+.sharing-scopes { margin-block-start: .25rem; font-size: calc(1rem * var(--ui-text-scale, 1)); }
+.visit-summary { margin-block-start: 1.25rem; padding-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); }
+.visit-summary h2 { margin-block-end: .625rem; }
+.visit-summary.has-summary { border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); padding: 1.25rem; }
+.summary-review { display: inline; color: var(--color-muted); }
+.summary-review + .summary-review::before { content: " · "; }
+.summary-section { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1rem; margin-block-start: 1rem; }
+.summary-section h3 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); margin-block-end: .5rem; }
 .summary-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
-.summary-actions { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-block-start: 1rem; }
+.summary-actions { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-block-start: .75rem; }
 .summary-actions .text-link { gap: .625rem; font-weight: 500; }
 .summary-actions #print-summary { flex-direction: row-reverse; }
-.summary-actions:has(#print-summary:not([hidden])) { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: .75rem; }
+.summary-actions:has(#print-summary:not([hidden])) { border-block-start: 1px solid var(--color-border-subtle); padding-block-start: .5rem; }
 .summary-actions:has(#print-summary:not([hidden])) #view-summary { order: 1; margin-inline-start: auto; color: var(--color-muted); }
-.sharing-empty { border-radius: var(--radius-md); padding: 1.125rem; background: var(--color-tint); border: 0; }
-.sharing-empty h2 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); }
+.sharing-empty { border-radius: var(--radius-md); padding: 1rem; background: var(--color-tint); }
+.sharing-empty h2 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); margin-block-end: .375rem; }
 .sharing-empty p { max-width: 52ch; }
-.summary-independence { margin-block: 1.5rem; color: var(--color-muted); font-size: calc(1rem * var(--ui-text-scale, 1)); }
-.summary-details { margin-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1rem; }
+.summary-independence { margin-block: 1rem; color: var(--color-muted); font-size: calc(1rem * var(--ui-text-scale, 1)); }
+.summary-details { margin-block-start: .75rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: .5rem; }
 .summary-details summary, .record-details > summary { min-height: 3rem; padding-block: .5rem; color: var(--color-primary); cursor: pointer; }
 .summary-details > .stack { margin-block-start: .75rem; font-size: calc(1rem * var(--ui-text-scale, 1)); }
-.record-details { margin-block-start: 2rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: 1rem; }
+.record-details { margin-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: .75rem; }
 .record-details > .stack { margin-block-start: 1rem; }
 .support-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
 .support-actions .button, .support-actions .text-link { font-size: calc(1rem * var(--ui-text-scale, 1)); }
@@ -58,20 +80,27 @@
 .audit-rows li { border-block-end: 1px solid var(--color-border-subtle); padding-block: 1rem; }
 .audit-rows p { font-size: calc(1rem * var(--ui-text-scale, 1)); }
 .audit-rows time { color: var(--color-muted); font-size: calc(.9375rem * var(--ui-text-scale, 1)); }
-@media (min-width: 70rem) { .patient-workspace { padding-block-start: 2rem; } }
 @media (max-width: 40rem) {
-  .patient-workspace { padding: 1.75rem 1.25rem 2.5rem; }
+  .patient-workspace { padding: 1.25rem 1.25rem 1.75rem; }
   .patient-visit-page .shell-bar, .patient-visit-page .shell-utilities { padding-inline: 1.25rem; }
+  .patient-visit-page .shell-utilities .button { padding-inline: .625rem; white-space: nowrap; }
   .patient-visit-page .shell-bar { flex-wrap: nowrap; }
   .patient-visit-page .brand { font-size: calc(1.625rem * var(--ui-text-scale, 1)); }
   .patient-visit-page .account-trigger { font-size: calc(1rem * var(--ui-text-scale, 1)); padding-inline: .25rem; }
   .patient-visit-page .shell-account { margin-inline-start: 0; }
-  .patient-visit-page .visit-heading h1 { font-size: calc(2.125rem * var(--ui-text-scale, 1)); }
-  .patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: calc(1.625rem * var(--ui-text-scale, 1)); }
-  .request-clinician, .visit-patient { font-size: calc(1.375rem * var(--ui-text-scale, 1)); }
+  .patient-visit-page .visit-heading h1 { font-size: calc(1.875rem * var(--ui-text-scale, 1)); }
+  .patient-visit-page .sharing-request h2, .patient-visit-page .visit-summary h2 { font-size: calc(1.5rem * var(--ui-text-scale, 1)); }
+  .visit-token-card { padding: 1.25rem; }
+  .visit-token-heading { gap: 1rem; }
+  .visit-ticket-icon { width: 2.5rem; height: 2.5rem; margin-block-end: .25rem; }
+  .visit-token-details { margin-block-start: 1rem; padding-block-start: 1rem; }
+  .visit-token-detail { gap: .5rem; }
+  .visit-token-detail + .visit-token-detail { padding-inline-start: .75rem; }
+  .visit-token-detail img { width: 1.5rem; height: 1.5rem; }
+  .visit-detail-value { font-size: calc(1.125rem * var(--ui-text-scale, 1)); }
   .sharing-active { grid-template-columns: 2.5rem minmax(0,1fr); padding: 1rem; }
   .sharing-active > .button { grid-column: 2; justify-self: start; }
-  .visit-summary.has-summary { padding: 1.125rem; }
+  .visit-summary.has-summary { padding: 1rem; }
 }
 @media print {
   .patient-workspace { display: none !important; }

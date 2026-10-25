@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { APP_ROOT, isWithin, parsePublicApiBase } from '../backend/config.js';
 
 const pages = ['login', 'patients', 'encounter', 'patient-visit'];
-const shared = ['api.js', 'session.js', 'ui.js', 'config.js', 'styles.css'];
+const shared = ['api.js', 'session.js', 'ui.js', 'hindi.js', 'config.js', 'styles.css'];
 const publicAssetExtensions = new Set(['.css', '.png', '.jpg', '.jpeg', '.webp', '.avif',
   '.svg', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.txt']);
 

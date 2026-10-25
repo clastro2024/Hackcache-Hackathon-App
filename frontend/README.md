@@ -54,14 +54,16 @@ Dismissal never submits an action. Unsaved-work decisions belong to the page.
 Announce meaningful changes with `announce`; unchanged messages are not repeated.
 No timer or animation can establish a successful mutation or failed save.
 
-`mountHeader` renders the provisional identity and appropriate provider/patient
+`mountHeader` renders the Vellum identity and appropriate provider/patient
 frame. Pass the authenticated account label/role and a real sign-out callback from
 the page controller when integrated. Header labels do not establish a session.
 Login, Patients, Clinical Encounter and Patient Visit use the session/API helpers.
 Language/Help are local dialogs. English and Hindi interface labels are available
-for the main workflows. Unmapped copy falls back to English; clinical notes,
-reviewed summaries and source records retain their original wording. Translation
-and comprehension still need representative user review. Only the interface-
+for the main workflows, including token/room digits, dates and recorded history
+labels/known terms. Patient names and ambiguous original source wording stay
+unchanged. Translation changes display only; form values, API commands and stored
+source records retain their original values. Translation and comprehension still
+need representative user review. Only the interface-
 language preference is stored in sessionStorage; clinical data is never stored there.
 
 Patient surfaces use `patient-surface`: 18px scalable body, at least 48px action
@@ -589,3 +591,34 @@ were inspected. No backend, dependencies, clinical contents or browser storage c
 The preview returned HTTP 200 with the new selector, chevron and color rules.
 Full npm test: 170 total, 165 passed, five TODOs, zero failures/skips/cancellations
 (44,320.4244 ms). Existing browser-environment and hosted-verification limits remain.
+
+## Shared UI and Vellum name — 25 October 2026
+
+The shared header, four page titles, printed tokens and frontend download names
+use Vellum. The header disclosure reads “All synthetic data used for demo”. Shared
+dialogs have compact, centered title/close rows and left-aligned footer actions.
+The clinician sign-out explanation is a custom hover/focus tooltip with a tap
+control and Escape dismissal. Hindi display covers token/room digits, dates,
+history labels and supported recorded terms; patient names and ambiguous source
+wording stay original. Language switching does not rewrite stored evidence or
+form/API values; the six supported Hindi questions map to canonical API questions.
+
+Login presents seven fixed synthetic accounts without credential fields. The
+demo endpoints issue normal server sessions and preserve CSRF, role/object checks
+and separate consent; selecting a persona simulates identity. Existing accounts
+and their private passwords are unchanged. See docs/API.md for the demo boundary.
+
+Environment/build/whitespace checks passed. Full repository tests: 180 total,
+174 passed, one Linux-only mount-boundary skip and five existing TODOs, zero
+failures (49,236.9227 ms). A disposable real-server/headless-Chrome workflow passed
+at 1366×900 and 390×844: seven account choices, actual sessions/role redirects,
+tooltip hover/focus/tap/Escape, compact modal geometry, Hindi queue/history and
+canonical question submission, English restoration, exact review/commit recovery,
+reviewed output and revocation. Two stub provider responses, zero live calls.
+Desktop/mobile screenshots were inspected. OS print dialog and hosted behavior
+remain unverified. The design detector used its degraded regex fallback; computed
+contrast was not evaluated by that detector.
+
+The preview was restarted against its existing frontend-preview.sqlite3 file;
+dataset identity and seven demo choices were verified. No initialization/reset,
+account edit or private configuration edit was performed for this change.

@@ -1,12 +1,14 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, createNotice, setText, setFieldError, announce, icon } from '../shared/ui.js';
+import { mountHeader, createNotice, setText, setFieldError, announce, icon, localizeUI } from '../shared/ui.js';
 
 const get=id=>document.getElementById(id);
 let actor=null,visit=null,allowance=null,generation=0,reading=false,working=false,timer,expiryTimer;
 let needsSession=true,ended=false,leaving=false,pending=null,logoutIntent=null,logoutWorking=false;
 let summary=null,auditPage=null,outputWorking=false,lastSharing='',visitBinding=null,destroyHeader=()=>{};
 const deadlines=new Map();
+let directionsBinding='',directionsGeneration=0,lastQueueGuidance='';
+const queued=()=>['WAITING','TRANSFERRED','RECALLED'].includes(visit?.queue_state);
 const scopeLabels={'triage:read':'Recorded history','vault:query':'Visit questions','affirmation:run':'Optional checks','summary:export':'A copy of your reviewed summary','vault:read':'Detailed recorded history'};
 const node=(tag,className,text)=>{const el=document.createElement(tag);if(className) el.className=className;if(text!==undefined) setText(el,text);return el;};
 function button(label,handler,className='button button--secondary') {const el=node('button',className,label);el.type='button';el.addEventListener('click',handler);return el;}
@@ -25,6 +27,7 @@ function lock() {
   get('print-summary').disabled=unavailable || outputWorking || !summary;
   get('download-fhir').disabled=unavailable || outputWorking || !latestEncounter();
   for(const id of ['load-audit','more-audit','check-integrity','download-audit']) get(id).disabled=unavailable || outputWorking;
+  get('show-directions').disabled=unavailable || !queued() || !visit?.destination?.node_id;
 }
 function clearSummary() {
   summary=null;get('summary-content').replaceChildren();get('summary-content').hidden=true;
@@ -36,6 +39,8 @@ function clearPrivate() {
   get('patient-content').hidden=true;get('patient-name').textContent='';get('visit-reference').textContent='';get('sharing').replaceChildren();
   get('choice-notice').replaceChildren();clearSummary();auditPage=null;
   for(const id of ['audit-rows','integrity-result','record-notice']) get(id).replaceChildren();
+  clearDirections();directionsBinding='';lastQueueGuidance='';get('queued-visit').hidden=true;
+  get('visit-token').textContent='';get('visit-room').textContent='';get('queue-guidance').textContent='';
   get('more-audit').hidden=true;get('record-details').open=false;lock();
 }
 function endContext(message) {
@@ -64,6 +69,41 @@ function live(item) {return (deadlines.get(item.consent_request_id || item.grant
 function scopes(values) {return values.map(value=>scopeLabels[value] ?? 'Unrecognized scope — ask staff before allowing').join(' · ');}
 function durationCopy(request) {const seconds=Math.min(900,Math.max(0,request.maximum_grant_seconds));return seconds>=900?'Up to 15 minutes for this visit.':`Up to ${Math.floor(seconds/60)} min ${seconds%60} sec for this visit.`;}
 function actionAllowed(item,action) {return live(item) && item.allowed_actions?.includes(action) && !working && !pending && !ended && !leaving;}
+function clearDirections() {
+  directionsGeneration+=1;get('visit-directions').hidden=true;get('directions-content').replaceChildren();
+  get('show-directions').setAttribute('aria-expanded','false');
+}
+function renderVisit() {
+  const waiting=queued(),binding=waiting?JSON.stringify([visit.visit_id,visit.room_id,visit.destination?.node_id,visit.map_version]):'';
+  if(binding!==directionsBinding) {clearDirections();directionsBinding=binding;}
+  get('queued-visit').hidden=!waiting;get('consultation-content').hidden=waiting;
+  setText(get('visit-title'),waiting?'Today’s visit':'Your visit');
+  setText(get('visit-reference'),waiting?'Fictional demo':`${visit?.public_token?`Visit ${visit.public_token} · `:''}Fictional demo`);
+  if(!waiting) return;
+  setText(get('visit-token'),visit.public_token);setText(get('visit-room'),visit.room_label);
+  const prefix=visit.queue_state==='TRANSFERRED'?'Your visit was transferred. ':visit.queue_state==='RECALLED'?'Your return is confirmed. ':'';
+  const guidance=`${prefix}Please wait near ${visit.room_label}.`;
+  if(lastQueueGuidance!==guidance) {setText(get('queue-guidance'),guidance);lastQueueGuidance=guidance;}
+  get('queue-paused').hidden=visit.service_state==='ACTIVE';
+}
+async function showDirections() {
+  if(!queued() || ended || leaving || get('patient-content').hidden) return;
+  if(!get('visit-directions').hidden) {clearDirections();return;}
+  const destination=visit.destination?.node_id;if(!destination) return;
+  const epoch=generation,binding=directionsBinding,request=++directionsGeneration;
+  get('visit-directions').hidden=false;get('show-directions').setAttribute('aria-expanded','true');
+  get('directions-content').replaceChildren(node('p','muted','Loading sample directions…'));
+  try {
+    const value=await api.read('/navigation/route',{origin:'entrance',destination,accessibility:'STEP_FREE',language:document.documentElement.lang==='hi'?'hi':'en'});
+    if(epoch!==generation || request!==directionsGeneration || binding!==directionsBinding || !queued() || ended || leaving || document.hidden) return;
+    if(value.destination!==destination || value.map_version!==visit.map_version) throw new Error('Outdated sample directions');
+    const content=get('directions-content');content.replaceChildren();
+    if(value.status==='ROUTE_AVAILABLE') {const list=node('ol');for(const step of value.steps) list.append(node('li','',step.instruction));content.append(list);}
+    content.append(node('p','muted',value.message || 'Ask hospital staff for directions and assistance.'));
+  } catch {
+    if(epoch===generation && request===directionsGeneration && binding===directionsBinding && !ended && !leaving) get('directions-content').replaceChildren(node('p','muted','Sample directions are unavailable. Ask hospital staff for directions and assistance.'));
+  }
+}
 function requestCard(request,index) {
   const card=node('article','sharing-request'),heading=node('h2','',index?'Another request to share records':'Share records for this visit?');card.append(heading);
   card.append(node('p','request-clinician',allowance.clinician.display_name),node('p','muted',allowance.facility.display_name));
@@ -145,7 +185,7 @@ async function poll() {
       rememberDeadlines(allowance,result.server_time,started);
     }
     get('patient-content').hidden=false;get('visit-notice').replaceChildren();setText(get('patient-name'),actor.display_name);
-    setText(get('visit-reference'),`${next?.public_token?`Visit ${next.public_token} · `:''}Fictional demo`);
+    renderVisit();
     renderSharing();if(pending) pendingNotice();
     else if(!working && get('choice-notice').querySelector('.notice--success')) get('choice-notice').replaceChildren();
     lock();
@@ -214,12 +254,12 @@ async function loadSummary({print=false}={}) {
     if(value.patient_id!==actor.patient_id || value.encounter_id!==encounter || value.summary_schema_version!=='reviewed-summary-v1') throw new Error('Invalid summary');
     summary=value;get('summary-content').replaceChildren(summaryView(value),node('p','field-help',`Loaded ${date(value.generated_at)}. Refresh to check for changes.`));get('summary-content').hidden=false;
     get('visit-summary').classList.add('has-summary');get('print-summary').hidden=false;setText(get('view-summary'),'Refresh summary');
-    if(print) {const region=get('print-content');region.replaceChildren(node('h1','','Your reviewed visit summary'),node('p','',value.patient_display_name),summaryView(value));for(const details of region.querySelectorAll('details')) details.open=true;window.print();}
+    if(print) {const region=get('print-content');region.replaceChildren(node('h1','','Your reviewed visit summary'),node('p','patient-name',value.patient_display_name),summaryView(value));for(const details of region.querySelectorAll('details')) details.open=true;localizeUI(region);window.print();}
   },{summaryOutput:true});
 }
 function saveJSON(value,prefix) {
   const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})),link=node('a');
-  link.href=url;link.download=`vaultmed-${prefix}-${crypto.randomUUID()}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  link.href=url;link.download=`vellum-${prefix}-${crypto.randomUUID()}.json`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 async function loadAudit(more=false) {
   if(!actor) return;const patient=actor.patient_id;
@@ -253,6 +293,8 @@ async function signOut() {
     notice('visit-notice','Sign-out not confirmed','Your visit details remain hidden. Check sign-out with the server.','caution',{label:'Check sign-out',onClick:signOut});
   } finally {logoutWorking=false;}
 }
+get('show-directions').addEventListener('click',()=>void showDirections());
+get('show-directions').append(icon('back'));
 get('view-summary').addEventListener('click',()=>loadSummary());get('print-summary').append(icon('print'));
 get('print-summary').addEventListener('click',()=>loadSummary({print:true}));
 get('load-audit').addEventListener('click',()=>loadAudit());get('more-audit').addEventListener('click',()=>loadAudit(true));

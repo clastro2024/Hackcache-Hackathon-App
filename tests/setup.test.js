@@ -68,6 +68,13 @@ test('storage maintenance settings do not require browser origins', () => {
   assert.equal(settings.dbPath, path.join(APP_ROOT, 'data/test-runs/example.sqlite3'));
 });
 
+test('Vellum storage configuration accepts the legacy alias, with the new key taking precedence',()=>{
+  const legacy={VAULTMED_DB_PATH:'data/test-runs/previous.sqlite3'};
+  assert.equal(loadStorageSettings(legacy).dbPath,path.join(APP_ROOT,legacy.VAULTMED_DB_PATH));
+  assert.equal(loadStorageSettings({...legacy,VELLUM_DB_PATH:'data/test-runs/current.sqlite3'}).dbPath,path.join(APP_ROOT,'data/test-runs/current.sqlite3'));
+  assert.throws(()=>loadStorageSettings({...legacy,VELLUM_DB_PATH:'../invalid.sqlite3'}),error=>error.field==='VELLUM_DB_PATH');
+});
+
 test('invalid core settings fail with safe field-only errors', () => {
   for (const [field, value] of [
     ['PORT', '0'], ['PORT', '1.5'], ['PORT', '65536'], ['PORT', 'bad'],
@@ -150,7 +157,7 @@ test('public build includes page/shared modules and CSS, excluding all private i
       assert.ok(files.includes(`${page}/${name}`));
     }
   }
-  for (const name of ['api', 'session', 'ui', 'config']) assert.ok(files.includes(`shared/${name}.js`));
+  for (const name of ['api', 'session', 'ui', 'hindi', 'config']) assert.ok(files.includes(`shared/${name}.js`));
   assert.ok(files.includes('assets/css/tailwind.css'));
   assert.ok((await readFile(path.join(dist, 'assets/css/tailwind.css'))).length > 0);
   const config = await readFile(path.join(dist, 'shared/config.js'), 'utf8');
@@ -178,11 +185,4 @@ test('a linked build-output directory is rejected before clearing its target', a
   const sandbox = await import(pathToFileURL(path.join(directory, 'scripts/build.js')).href);
   await assert.rejects(() => sandbox.build({}), /Unsafe build output/);
   assert.equal(await readFile(path.join(directory, 'preserved/keep.txt'), 'utf8'), 'preserved');
-});
-
-test('Vellum storage configuration accepts the legacy alias, with the new key taking precedence',()=>{
-  const legacy={VAULTMED_DB_PATH:'data/test-runs/previous.sqlite3'};
-  assert.equal(loadStorageSettings(legacy).dbPath,path.join(APP_ROOT,legacy.VAULTMED_DB_PATH));
-  assert.equal(loadStorageSettings({...legacy,VELLUM_DB_PATH:'data/test-runs/current.sqlite3'}).dbPath,path.join(APP_ROOT,'data/test-runs/current.sqlite3'));
-  assert.throws(()=>loadStorageSettings({...legacy,VELLUM_DB_PATH:'../invalid.sqlite3'}),error=>error.field==='VELLUM_DB_PATH');
 });
