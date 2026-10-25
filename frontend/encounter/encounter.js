@@ -17,7 +17,7 @@ const dialogs=Object.fromEntries(['review','item','action','source'].map(name=>[
 let actor=null,ready=false,ended=false,closed=false,leaving=false,needsSession=true,needsDraft=true,reading=false;
 let generation=0,historyEpoch=0,revision=0,roomVersion=-1,timer,expiryTimer,historyDeadline=0,grantKey='';
 let allowance=null,history=null,draft=null,items=[],dirty=false,conflict=false,committed=false,editingItem=-1,actionSubmit=null;
-let destroyHeader=()=>{},logoutIntent=null,logoutWorking=false;
+let destroyHeader=()=>{},logoutIntent=null,logoutWorking=false,initialLoaded=false;
 const pending={write:null,history:null,access:null},working=new Set();
 const historyKinds=new Set(['query','check','summary']);
 const laneFor=kind=>['capture','save','review','commit','brief'].includes(kind)?'write':historyKinds.has(kind)?'history':'access';
@@ -132,7 +132,7 @@ async function poll() {
     if(needsDraft && !dirty && !pending.write) await loadDraft();
     if(!history && hasScope('triage:read')) await loadHistory();
     lock();showPending();
-    hideLoader();
+    if(!initialLoaded) {initialLoaded=true;hideLoader();}
   } catch(error) {
     if(!ended && !leaving) {clearPrivate();needsSession=true;notice('workspace-notice','Workspace unavailable','Protected content and unsent edits have been cleared. The page will check the server again.','caution',{label:'Try again',onClick:poll});showPending();}
   } finally {reading=false;schedule();}

@@ -6,7 +6,7 @@ showLoader();
 
 const get=id=>document.getElementById(id);
 let actor=null,visit=null,allowance=null,generation=0,reading=false,working=false,timer,expiryTimer;
-let needsSession=true,ended=false,leaving=false,pending=null,logoutIntent=null,logoutWorking=false;
+let needsSession=true,ended=false,leaving=false,pending=null,logoutIntent=null,logoutWorking=false,initialLoaded=false;
 let summary=null,auditPage=null,outputWorking=false,lastSharing='',visitBinding=null,destroyHeader=()=>{};
 const deadlines=new Map();
 let directionsBinding='',directionsGeneration=0,lastQueueGuidance='';
@@ -190,7 +190,7 @@ async function poll() {
     get('patient-content').hidden=false;get('visit-notice').replaceChildren();setText(get('patient-name'),actor.display_name);
     renderVisit();
     renderSharing();
-    hideLoader();
+    if(!initialLoaded) {initialLoaded=true;hideLoader();}
     if(pending) pendingNotice();
     else if(!working && get('choice-notice').querySelector('.notice--success')) get('choice-notice').replaceChildren();
     lock();

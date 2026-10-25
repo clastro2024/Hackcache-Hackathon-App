@@ -327,8 +327,10 @@ export function setInterfaceLanguage(code) {
 }
 
 let loaderShownTime = 0;
+let loaderHidden = false;
 
 export function showLoader({ brand = 'Vellum' } = {}) {
+  loaderHidden = false;
   loaderShownTime = Date.now();
   let loader = document.getElementById('vellum-page-loader');
   if (!loader) {
@@ -350,6 +352,8 @@ export function showLoader({ brand = 'Vellum' } = {}) {
 }
 
 export function hideLoader({ minDuration = 500 } = {}) {
+  if (loaderHidden) return;
+  loaderHidden = true;
   const elapsed = Date.now() - loaderShownTime;
   const delay = loaderShownTime > 0 && elapsed < minDuration ? minDuration - elapsed : 0;
 
@@ -359,10 +363,8 @@ export function hideLoader({ minDuration = 500 } = {}) {
       loader.classList.add('is-hidden');
     }
     const main = document.getElementById('main-content');
-    if (main) {
-      main.classList.remove('workspace-pop-in');
-      void main.offsetWidth;
-      main.classList.add('workspace-pop-in');
+    if (main && !main.classList.contains('workspace-entered')) {
+      main.classList.add('workspace-pop-in', 'workspace-entered');
     }
   }, delay);
 }

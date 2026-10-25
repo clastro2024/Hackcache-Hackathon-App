@@ -14,7 +14,7 @@ let assistedPatient=null,assistedStatus=null,assistedReading=false,assistedSigna
 let actor=null,roomId=null,snapshot=null,generation=0,timer,reading=false,working=false;
 let pending=null,decisionAction=null,needsSession=true,ended=false,leaving=false,logoutIntent=null;
 let lastRender='',destroyHeader=()=>{},registrationRoom=null,lastOutcome=null;
-let logoutWorking=false;
+let logoutWorking=false,initialLoaded=false;
 const versions=new Map();
 
 function node(tag,className,text) {
@@ -205,7 +205,7 @@ async function poll() {
     if(value.room_id!==selected || !Number.isSafeInteger(value.version) || !Array.isArray(value.waiting) || !Array.isArray(value.absent)) throw new Error('Invalid room snapshot');
     if(value.version<(versions.get(selected) ?? -1)) return;
     versions.set(selected,value.version);snapshot=value;get('connection-notice').replaceChildren();renderQueue(value);
-    hideLoader();
+    if(!initialLoaded) {initialLoaded=true;hideLoader();}
     if(get('assisted-sharing').open && !assistedReading && !pending) void loadAssisted();
     if(pending && !working) showPending();
     else if(lastOutcome && !working) notice('command-notice',lastOutcome.title,lastOutcome.message,lastOutcome.tone);
