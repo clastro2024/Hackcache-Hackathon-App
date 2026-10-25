@@ -136,7 +136,10 @@ async function loadAccounts() {
         );
 
         copy.append(name, detail);
-        button.append(icon(role === 'PATIENT' ? 'person' : 'people'), copy, icon('chevron'));
+        const iconWrap = document.createElement('span');
+        iconWrap.className = 'demo-account-icon-wrap';
+        iconWrap.append(icon(role === 'PATIENT' ? 'person' : 'people'));
+        button.append(iconWrap, copy, icon('chevron'));
         button.addEventListener('click', () => void chooseAccount(account, button));
         buttonList.append(button);
       }
