@@ -1,5 +1,13 @@
 # Implementation status
 
+## Backend product name — Vellum
+
+New backend output and setup use **Vellum**: `vellum_session`, `vellum-*.json`/`vellum-audit-*.json` downloads, `urn:vellum:demo:*` export identifiers, `vellum-backup-v1` manifests, `VELLUM_DB_PATH`, default `data/runtime/vellum.sqlite3`, and `/etc/secrets/vellum-passwords.json`. The npm package, runtime helper and Render candidate also use the new name.
+
+Compatibility only: existing `vaultmed_session` cookies and `vaultmed-backup-v1` manifests are accepted; logout clears both cookie names. `VAULTMED_DB_PATH` remains a fallback when `VELLUM_DB_PATH` is unset. Initialization accepts the earlier `/etc/secrets/vaultmed-passwords.json` if the new secret filename is absent. Already configured file paths are retained; database files, clinical canonical bytes, IDs and hash chains are not renamed or rewritten. For an existing default database, set `VELLUM_DB_PATH` to its actual existing path rather than initializing a new dataset. Existing hosted service/disk labels need no destructive recreation for branding; the Blueprint is a candidate, not an applied migration.
+
+Validation: Node 24.22.1/SQLite 3.53.4 environment and public build passed. Full `npm test` recorded **177 total / 172 passed / five TODOs / zero failures/skips/cancellations**, 41,978.3144 ms. Real HTTP checks covered legacy-cookie recovery, clearing both names and revoked-session refusal; storage checks covered configuration precedence and restore from a legacy backup manifest with unchanged clinical heads. Download tests verified Vellum filenames and the new document namespace. No live provider call, dataset migration or memory-tuning run was made. Concurrent frontend/demo-login work was preserved and is separate from this branding change.
+
 ## Existing frontend integration — 25 October 2026
 
 The existing Login, Patients, Clinical Encounter and Patient Visit controllers use the implemented backend routes. The latest integration section changed only request/page logic, one helper regression test and engineering documentation. It added no control, page, layout, stylesheet, dependency, backend endpoint or live provider call. Concurrent frontend changes were preserved; they are separate from this section's edits.
@@ -158,7 +166,7 @@ Final verification: 102 tests total, 94 passed, 0 failed, 0 skipped and 8 TODO m
 - tests/helpers.js, transactions.test.js, runtime-recovery.test.js, vault.test.js and fixtures/v1-vectors.json: isolated file-backed verification, real SQLite contention, owned-child termination/reopen, maintenance CLI and canonical references. auth.test.js, operations.test.js, runtime-http.test.js and browser-helpers.test.js add actual local HTTP auth, current permissions/expiry, rollback/response-loss/race/release checks, real listener close/reopen and shared-helper integration through a Node cookie adapter. tests/setup.test.js retains setup/private-build checks.
 - README, CONTRIBUTING, SECURITY and AGENTS now describe this stage. Node 24 Windows/Linux CI was configured at that stage; the later remote run above passed both platforms.
 
-The private .env, package pins and parent planning/design files were preserved. Concurrent frontend work was preserved without redesign by this backend section. The prior App baseline was committed as requested; this section makes no push/deployment/provider call. The default data/runtime/vaultmed.sqlite3 remains absent: disposable test files use private random passwords. Operators initialize their working file through the documented private CLI prompt, then run npm start; missing storage fails safely.
+The private .env, package pins and parent planning/design files were preserved. Concurrent frontend work was preserved without redesign by this backend section. The prior App baseline was committed as requested; this section makes no push/deployment/provider call. The default data/runtime/vellum.sqlite3 remains absent: disposable test files use private random passwords. Operators initialize their working file through the documented private CLI prompt, then run npm start; missing storage fails safely.
 
 ## Storage and recovery semantics
 

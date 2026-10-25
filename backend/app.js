@@ -262,7 +262,7 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory,aiOpti
         request_id:res.locals.requestId,server_time:new Date(now()).toISOString()});
       const buffer=result.release();
       res.set('X-Export-ID',result.generationId);res.set('X-FHIR-Validation','NOT_RUN');
-      if(format==='fhir-export') res.set('Content-Disposition',`attachment; filename="vaultmed-${result.generationId}.json"`);
+      if(format==='fhir-export') res.set('Content-Disposition',`attachment; filename="vellum-${result.generationId}.json"`);
       return res.type(format==='summary'?'application/json':'application/fhir+json').send(buffer);
     });
   }
@@ -272,7 +272,7 @@ export async function createApp(settings,{clock,hooks={},fixtureDirectory,aiOpti
     async(req,res)=>clinicalResponse(res,await operations.integrity(ref(req),req.params.patient_id)));
   app.get('/api/v1/audit/export/:patient_id',parameters('patient_id'),query(emptySchema),async(req,res)=>{
     const result=await operations.exportOwnAudit(ref(req),req.params.patient_id);const buffer=result.release();
-    res.set('X-Export-ID',result.generationId);res.set('Content-Disposition',`attachment; filename="vaultmed-audit-${result.generationId}.json"`);
+    res.set('X-Export-ID',result.generationId);res.set('Content-Disposition',`attachment; filename="vellum-audit-${result.generationId}.json"`);
     return res.type('application/json').send(buffer);
   });
   app.get('/api/v1/system/telemetry',query(emptySchema),(req,res)=>{

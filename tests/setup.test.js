@@ -11,7 +11,7 @@ import { build } from '../scripts/build.js';
 
 const execute = promisify(execFile);
 const safeEnv = { FRONTEND_ORIGIN: 'http://127.0.0.1:3000', API_ORIGIN: 'http://127.0.0.1:3000' };
-const sentinel = 'VAULTMED_SETUP_PRIVATE_SENTINEL';
+const sentinel = 'VELLUM_SETUP_PRIVATE_SENTINEL';
 
 async function scratch(t) {
   const parent = path.join(APP_ROOT, 'data/test-runs');
@@ -53,7 +53,7 @@ async function walk(root, relative = '') {
 
 test('settings use private App-relative storage and independent disabled AI/mock flags', () => {
   const settings = loadServerSettings(safeEnv);
-  assert.equal(settings.dbPath, path.join(APP_ROOT, 'data/runtime/vaultmed.sqlite3'));
+  assert.equal(settings.dbPath, path.join(APP_ROOT, 'data/runtime/vellum.sqlite3'));
   assert.equal(settings.sarvam.requested, false);
   assert.equal(settings.mockAsr.enabled, true);
   assert.ok(Object.isFrozen(settings) && Object.isFrozen(settings.sarvam));
@@ -64,7 +64,7 @@ test('settings use private App-relative storage and independent disabled AI/mock
 });
 
 test('storage maintenance settings do not require browser origins', () => {
-  const settings = loadStorageSettings({ VAULTMED_DB_PATH: 'data/test-runs/example.sqlite3' });
+  const settings = loadStorageSettings({ VELLUM_DB_PATH: 'data/test-runs/example.sqlite3' });
   assert.equal(settings.dbPath, path.join(APP_ROOT, 'data/test-runs/example.sqlite3'));
 });
 
@@ -93,7 +93,7 @@ test('database paths reject escape, URI, network and alternate-stream input', ()
   for (const value of ['../outside.sqlite3', 'data/../../outside.sqlite3', 'data',
     ':memory:', 'file:data/runtime/example.sqlite3', '//server/share/db',
     '\\\\server\\share\\db', 'data/runtime/db:secret', 'data/runtime/db?mode=ro']) {
-    assert.throws(() => resolveDatabasePath(value), error => error.field === 'VAULTMED_DB_PATH');
+    assert.throws(() => resolveDatabasePath(value), error => error.field === 'VELLUM_DB_PATH');
   }
 });
 
@@ -110,10 +110,10 @@ test('public API config permits explicit paths/HTTPS and rejects credential-bear
 test('Node env-file loading preserves existing process environment', async t => {
   const directory = await scratch(t);
   const file = path.join(directory, '.env');
-  await writeFile(file, 'VAULTMED_SETUP_PROBE=from-file\n');
+  await writeFile(file, 'VELLUM_SETUP_PROBE=from-file\n');
   const result = await runNode([`--env-file=${file}`, '-e',
-    'process.stdout.write(process.env.VAULTMED_SETUP_PROBE)'], {
-    env: { ...process.env, VAULTMED_SETUP_PROBE: 'from-process' },
+    'process.stdout.write(process.env.VELLUM_SETUP_PROBE)'], {
+    env: { ...process.env, VELLUM_SETUP_PROBE: 'from-process' },
   });
   assert.equal(result.code, 0);
   assert.equal(result.stdout, 'from-process');
@@ -127,7 +127,7 @@ test('server refuses missing storage and resource runner requires explicit mode 
     ['tests/resource-run.js', [], 'RESOURCE_RUN_REQUIRES_EXPLICIT_MODE'],
   ]) {
     const result = await runNode([file, ...args],{env:{...process.env,...safeEnv,SARVAM_API_KEY:sentinel,
-      VAULTMED_DB_PATH:path.join(directory,'missing.sqlite3')}});
+      VELLUM_DB_PATH:path.join(directory,'missing.sqlite3')}});
     assert.equal(result.code, 1);
     assert.ok(result.stderr.includes(marker));
     assert.equal(`${result.stdout}${result.stderr}`.includes(sentinel), false);
@@ -141,7 +141,7 @@ test('server refuses missing storage and resource runner requires explicit mode 
 test('public build includes page/shared modules and CSS, excluding all private inputs', async () => {
   const runtime = await readdir(path.join(APP_ROOT, 'data/runtime'));
   const result = await build({ PUBLIC_API_BASE_URL: '/api/v1', SARVAM_API_KEY: sentinel,
-    PORT: 'invalid-server-setting', VAULTMED_DB_PATH: '../invalid-server-path' });
+    PORT: 'invalid-server-setting', VELLUM_DB_PATH: '../invalid-server-path' });
   assert.equal(result.pages, 4);
   const dist = path.join(APP_ROOT, 'dist');
   const files = await walk(dist);
@@ -178,4 +178,11 @@ test('a linked build-output directory is rejected before clearing its target', a
   const sandbox = await import(pathToFileURL(path.join(directory, 'scripts/build.js')).href);
   await assert.rejects(() => sandbox.build({}), /Unsafe build output/);
   assert.equal(await readFile(path.join(directory, 'preserved/keep.txt'), 'utf8'), 'preserved');
+});
+
+test('Vellum storage configuration accepts the legacy alias, with the new key taking precedence',()=>{
+  const legacy={VAULTMED_DB_PATH:'data/test-runs/previous.sqlite3'};
+  assert.equal(loadStorageSettings(legacy).dbPath,path.join(APP_ROOT,legacy.VAULTMED_DB_PATH));
+  assert.equal(loadStorageSettings({...legacy,VELLUM_DB_PATH:'data/test-runs/current.sqlite3'}).dbPath,path.join(APP_ROOT,'data/test-runs/current.sqlite3'));
+  assert.throws(()=>loadStorageSettings({...legacy,VELLUM_DB_PATH:'../invalid.sqlite3'}),error=>error.field==='VELLUM_DB_PATH');
 });

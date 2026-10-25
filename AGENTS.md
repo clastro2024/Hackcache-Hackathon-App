@@ -1,6 +1,6 @@
 # App repository instructions
 
-This is the independent VaultMed / CharakVault application repository. Preserve unrelated work. Read README.md and docs/STATUS.md for actual implementation status.
+This is the independent Vellum application repository. Preserve unrelated work. Read README.md and docs/STATUS.md for actual implementation status.
 
 - The user requested on 25 October 2026 that App work continue directly on `main`. Use `main` for future work unless the user explicitly requests another branch; preserve concurrent uncommitted changes when switching.
 

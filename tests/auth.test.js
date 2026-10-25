@@ -4,6 +4,22 @@ import { randomUUID } from 'node:crypto';
 import http from 'node:http';
 import { httpFixture } from './helpers.js';
 import { cookieReference, createLimiter, sessionCookie } from '../backend/auth.js';
+
+test('Vellum cookie compatibility: legacy sessions remain usable and logout clears/revokes both names',async t=>{
+  const f=await httpFixture(t),login=await f.login();assert.equal(login.status,200);
+  assert.ok(login.cookie.startsWith('vellum_session='));
+  const legacy=login.cookie.replace('vellum_session=','vaultmed_session=');
+  assert.deepEqual(cookieReference(legacy),cookieReference(login.cookie));
+  assert.equal(cookieReference(`${legacy}; ${legacy}`),null);
+  assert.equal(cookieReference(`vellum_session=invalid; ${legacy}`),null);
+  assert.equal((await f.request('/api/v1/auth/session',{cookie:legacy})).body.authenticated,true);
+  const logout=await f.request('/api/v1/auth/logout',{method:'POST',cookie:legacy,csrf:login.body.csrf_token,body:{}});
+  assert.equal(logout.status,200);
+  assert.match(logout.headers.get('Set-Cookie'),/vellum_session=;/u);
+  assert.match(logout.headers.get('Set-Cookie'),/vaultmed_session=;/u);
+  assert.equal((await f.request('/api/v1/auth/session',{cookie:legacy})).body.authenticated,false);
+  assert.equal((await f.request('/api/v1/auth/session',{cookie:login.cookie})).body.authenticated,false);
+});
 import { appendAudit } from '../backend/services/audit.js';
 import { canonicalJSON, digest } from '../backend/services/vault.js';
 

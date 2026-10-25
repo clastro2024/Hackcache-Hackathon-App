@@ -1,5 +1,4 @@
 // Explicit deployment entrypoint; ordinary invocation never initializes storage.
-import { lstat,open } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -9,6 +8,7 @@ import { StorageError,privatePath,requireStorage } from '../backend/db.js';
 import { initializeDatabase,main as managementMain } from '../backend/manage.js';
 import { parseJSON } from '../backend/services/vault.js';
 import { startServer } from '../backend/server.js';
+import { readPrivateFile } from '../backend/private-file.js';
 
 export function deploymentCheck(settings,env,{diskRoot=path.join(settings.appRoot,'data/runtime')}={}) {
   requireStorage(settings.host==='0.0.0.0' && !settings.loopbackHttp,'DEPLOYMENT_HTTPS_REQUIRED');
@@ -20,22 +20,24 @@ export function deploymentCheck(settings,env,{diskRoot=path.join(settings.appRoo
   return {status:'CONFIGURATION_VALID',storage:'PRIVATE_PERSISTENT_DISK_REQUIRED',origin:settings.apiOrigin,
     provider_calls:settings.sarvam.requested?'CREDIT_GATED':'DISABLED'};
 }
-export async function initializeDeployment(settings,secretFile='/etc/secrets/vaultmed-passwords.json') {
+export async function initializeDeployment(settings,secretFile=existsSync('/etc/secrets/vellum-passwords.json')?'/etc/secrets/vellum-passwords.json':
+  existsSync('/etc/secrets/vaultmed-passwords.json')?'/etc/secrets/vaultmed-passwords.json':'/etc/secrets/vellum-passwords.json') {
   const file=privatePath(settings.dbPath,{createParents:true});
   requireStorage(!existsSync(file),'DEPLOYMENT_DATABASE_ALREADY_EXISTS');
-  const stat=await lstat(secretFile);
-  requireStorage(stat.isFile() && !stat.isSymbolicLink() && stat.size<=8192,'INVALID_PRIVATE_INPUT');
-  const handle=await open(secretFile,'r'),bytes=Buffer.alloc(8193);let length;
-  try {const opened=await handle.stat();requireStorage(opened.isFile() && opened.dev===stat.dev && opened.ino===stat.ino,'INVALID_PRIVATE_INPUT');
-    length=0;while(length<bytes.length){const read=(await handle.read(bytes,length,bytes.length-length,length)).bytesRead;if(read===0)break;length+=read;}
-    requireStorage(length<=8192,'INVALID_PRIVATE_INPUT');}
-  finally {await handle.close();}
-  let passwords;
-  try {passwords=parseJSON(new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(0,length)),8192);}
-  catch {throw new StorageError('INVALID_PRIVATE_INPUT');}
-  try {const result=await initializeDatabase(file,{passwords,seedLabel:'opd-demo-v1'});
-    requireStorage(result.status==='INITIALIZED','DEPLOYMENT_DATABASE_ALREADY_EXISTS');}
-  finally {bytes.fill(0);passwords=null;}
+  let bytes,passwords;
+  try {
+    try {bytes=readPrivateFile(secretFile,8192);}
+    catch(error){throw new StorageError(`DEPLOYMENT_PASSWORD_${error.code?.startsWith('PRIVATE_FILE_')?error.code.slice(13):'FILE_UNREADABLE'}`);}
+    let text;
+    try {text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}
+    catch{throw new StorageError('DEPLOYMENT_PASSWORD_UTF8_INVALID');}
+    try {passwords=parseJSON(text,8192);}
+    catch{throw new StorageError('DEPLOYMENT_PASSWORD_JSON_INVALID');}
+    let result;
+    try {result=await initializeDatabase(file,{passwords,seedLabel:'opd-demo-v1'});}
+    catch(error){if(error.code==='PRIVATE_PASSWORD_INPUT_REQUIRED')throw new StorageError('DEPLOYMENT_PASSWORD_VALUES_INVALID');throw error;}
+    requireStorage(result.status==='INITIALIZED','DEPLOYMENT_DATABASE_ALREADY_EXISTS');
+  }finally {bytes?.fill(0);passwords=null;}
 }
 export async function runDeployment(args=process.argv.slice(2),env=process.env) {
   const maintenance=args[0]==='--maintenance';

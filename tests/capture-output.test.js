@@ -30,7 +30,8 @@ test('F01/F04 HTTP: only committed reviewed batch, condition-only Composition-fi
   assert.equal(first.status,200,JSON.stringify(first.body));assert.match(first.headers.get('Content-Type'),/^application\/fhir\+json/u);
   assert.equal(first.headers.get('X-FHIR-Validation'),'NOT_RUN');assert.match(first.headers.get('Cache-Control'),/no-store/u);
   assert.equal(first.body.resourceType,'Bundle');assert.equal(first.body.type,'document');assert.equal(first.body.request_id,undefined);
-  assert.equal(first.headers.get('X-Export-ID'),first.body.identifier.value);assert.match(first.headers.get('Content-Disposition'),/attachment; filename="vaultmed-[a-f0-9-]+\.json"/u);
+  assert.equal(first.body.identifier.system,'urn:vellum:demo:documents');
+  assert.equal(first.headers.get('X-Export-ID'),first.body.identifier.value);assert.match(first.headers.get('Content-Disposition'),/attachment; filename="vellum-[a-f0-9-]+\.json"/u);
   assert.notEqual(first.body.identifier.value,second.body.identifier.value);
   const list=resources(first);assert.deepEqual(list.map(r=>r.resourceType),['Composition','Patient','Condition','Practitioner','Encounter']);
   assert.equal(list[2].verificationStatus.coding[0].code,'unconfirmed');assert.equal(list[2].onsetDateTime,undefined);
@@ -182,7 +183,7 @@ test('F/D recovery HTTP: restored reviewed output retains event bytes, ends reco
   const dataset=f.store.verification.dataset_id;await f.cleanup();
   const backup=nodePath.join(f.directory,'reviewed-backup.sqlite3'),restored=nodePath.join(f.directory,'reviewed-restored.sqlite3');
   await backupDatabase(f.file,backup);await restoreDatabase(backup,restored);
-  const app=await createApp(loadServerSettings({FRONTEND_ORIGIN:f.origin,API_ORIGIN:f.origin,VAULTMED_DB_PATH:restored})),server=http.createServer(app);
+  const app=await createApp(loadServerSettings({FRONTEND_ORIGIN:f.origin,API_ORIGIN:f.origin,VELLUM_DB_PATH:restored})),server=http.createServer(app);
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const base=`http://127.0.0.1:${server.address().port}`;
   try {
     const stale=await fetch(`${base}${path()}`,{headers:{Cookie:f.patient.login.cookie}});assert.equal(stale.status,401);await stale.arrayBuffer();

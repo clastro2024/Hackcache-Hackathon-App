@@ -45,7 +45,7 @@ export async function httpFixture(t,options={}) {
   const {serverEnv={},...appOptions}=options;
   const f=await fixture(t);f.store.close();
   const origin='http://127.0.0.1:3000';
-  const settings=loadServerSettings({FRONTEND_ORIGIN:origin,API_ORIGIN:origin,VAULTMED_DB_PATH:f.file,...serverEnv});
+  const settings=loadServerSettings({FRONTEND_ORIGIN:origin,API_ORIGIN:origin,VELLUM_DB_PATH:f.file,...serverEnv});
   const app=await createApp(settings,appOptions);f.store=app.locals.store;
   const server=http.createServer(app);
   await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});

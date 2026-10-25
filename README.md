@@ -1,4 +1,4 @@
-# VaultMed / CharakVault
+# Vellum
 
 Fictional-data OPD prototype for assisted intake, queue/navigation, patient-controlled record access and clinician-reviewed documentation.
 
@@ -40,7 +40,7 @@ The exact eight direct packages and their transitive dependencies are locked. `.
 | `npm run ai -- credit --balance-inr <verified-amount> --hours 24` | Explicit private operator credit confirmation; add --replace only after a new balance check. |
 | `npm run deploy:check` | Check HTTPS/single-worker/runtime-disk/mock-voice and optional gated-text deployment configuration without initializing storage or making a provider call. |
 | `npm run deploy:start` | Start the prepared Render candidate against an existing database, with a 25-second drain limit. |
-| `npm run manage -- init --db data/runtime/vaultmed.sqlite3 --seed opd-demo-v1` | Privately prompt for fictional account passwords and explicitly initialize a new dataset. Matching existing initialization is a verified no-op. |
+| `npm run manage -- init --db data/runtime/vellum.sqlite3 --seed opd-demo-v1` | Privately prompt for fictional account passwords and explicitly initialize a new dataset. Matching existing initialization is a verified no-op. |
 | `npm run resource:smoke` | Exercise the owned-process resource harness briefly; targets remain UNAVAILABLE. |
 | `npm run resource:profile` | Private sampled allocation diagnostic; targets remain UNAVAILABLE. |
 | `npm run resource:run` | Run the paced resource-small-v1 workload for about five minutes with the serving runtime policy and save a private report. No-argument invocation refuses to run. |
@@ -51,7 +51,7 @@ Implemented auth routes are `POST /api/v1/auth/login`, `GET /api/v1/auth/session
 
 ## Configuration and private data
 
-`.env.example` documents PORT, HOST, FRONTEND_ORIGIN, API_ORIGIN, VAULTMED_DB_PATH, USE_MOCK_ASR, SARVAM_ENABLED, SARVAM_API_KEY, SARVAM_ACCESS_FILE and PUBLIC_API_BASE_URL. Keep `.env` private. Public defaults use loopback HTTP, mock voice and disabled text AI; the operator's current local configuration enables verified gated text. Do not paste provider keys into chat. No provider account, payment or request is needed for the default setup.
+`.env.example` documents PORT, HOST, FRONTEND_ORIGIN, API_ORIGIN, VELLUM_DB_PATH, USE_MOCK_ASR, SARVAM_ENABLED, SARVAM_API_KEY, SARVAM_ACCESS_FILE and PUBLIC_API_BASE_URL. Keep `.env` private. Public defaults use loopback HTTP, mock voice and disabled text AI; the operator's current local configuration enables verified gated text. Do not paste provider keys into chat. No provider account, payment or request is needed for the default setup.
 
 Only the parsed PUBLIC_API_BASE_URL enters browser configuration. Database/manifest paths are restricted to ignored data/runtime, data/backups, data/reports or data/test-runs directories; data/fixtures is for tracked credential-free source inputs. The seed contains four fictional patients, seven fixed accounts, rooms 12/18, waiting/current/absent checkpoints, penicillin-positive and discontinued-Ecosprin sources, and a scoped latex-negative source. No mental-health diagnosis is inferred. Capture supports three offline scripted examples or manual text, then save/exact review/one committed batch per encounter. Manual text creates no automatic items; simulated transcription processes no audio. Six exact clinical questions return source-cited, limited-vault evidence under current consent. Optional checks return NOT_EVALUATED because no sourced, clinician-reviewed interaction rules are installed. Sample navigation is bilingual and supports step-free filtering, with no surveyed-accessibility claim. See [API contract](docs/API.md).
 
@@ -66,10 +66,10 @@ The default working database is not initialized by install/build/test. Explicit 
 All maintenance and the backend hold the same cooperative per-file process lease. Stop the backend before running maintenance; a live or unknown lease owner is refused. Dead-process leases can be recovered without killing another process or deleting WAL/SHM files. This is coordination for cooperating entrypoints, not protection against a privileged host operator.
 
 ```powershell
-npm run manage -- verify --db data/runtime/vaultmed.sqlite3
-npm run manage -- backup --db data/runtime/vaultmed.sqlite3 --out data/backups/opd-baseline.sqlite3
+npm run manage -- verify --db data/runtime/vellum.sqlite3
+npm run manage -- backup --db data/runtime/vellum.sqlite3 --out data/backups/opd-baseline.sqlite3
 npm run manage -- restore --backup data/backups/opd-baseline.sqlite3 --new-db data/runtime/restored-001.sqlite3
-npm run manage -- reset --db data/runtime/vaultmed.sqlite3 --new-db data/runtime/fictional-002.sqlite3 --seed opd-demo-v1
+npm run manage -- reset --db data/runtime/vellum.sqlite3 --new-db data/runtime/fictional-002.sqlite3 --seed opd-demo-v1
 ```
 
 Outputs must be new paths. Backup uses SQLite's backup API, verifies a standalone DELETE-journal candidate and writes its checksum/counts/clinical-head manifest beside it; the source remains WAL. Restore checks the manifest/checksum/schema/runtime/chains, creates a separate WAL file, revokes recovered sessions, cancels pending requests, ends active grants and assigns a new dataset ID without rewriting clinical events. It pauses rooms for staff reconciliation of the recovered checkpoint. It does not switch .env automatically. Reset first creates a verified backup, preserves the old database and initializes a separate fictional dataset with new private passwords.

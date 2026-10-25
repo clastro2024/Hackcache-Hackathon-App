@@ -60,7 +60,7 @@ export function buildSummary(source) {
 
 const escape=value=>value.replace(/[&<>"']/gu,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
 const narrative=text=>({status:'additional',div:`<div xmlns="http://www.w3.org/1999/xhtml"><p>${escape(text).replace(/\r\n|\r|\n/gu,'<br/>')}</p></div>`});
-const identifier=(namespace,value)=>[{system:`urn:vaultmed:demo:${namespace}`,value}];
+const identifier=(namespace,value)=>[{system:`urn:vellum:demo:${namespace}`,value}];
 const clinicalCode=(system,code)=>({coding:[{system:`http://terminology.hl7.org/CodeSystem/${system}`,code}]});
 const statusMap={ACTIVE:'active',COMPLETED:'completed',DISCONTINUED:'stopped',UNKNOWN:'unknown'};
 export function buildFHIR(summary,source) {
@@ -99,7 +99,7 @@ export function buildFHIR(summary,source) {
     const linked=section.key==='PRESCRIPTIONS'||section.key==='CONDITIONS'?section.event_ids.map(id=>references.get(id)).filter(Boolean):[];
     return {title:section.title,text:narrative(section.text),...(linked.length?{entry:linked}:{})};
   })});
-  return {resourceType:'Bundle',type:'document',identifier:{system:'urn:vaultmed:demo:documents',value:summary.generation_id},
+  return {resourceType:'Bundle',type:'document',identifier:{system:'urn:vellum:demo:documents',value:summary.generation_id},
     timestamp:summary.generated_at,meta:{lastUpdated:summary.generated_at},entry:entries};
 }
 
@@ -111,7 +111,7 @@ const reference=z.strictObject({reference:url});
 const cc=z.strictObject({text:value});
 const narrativeSchema=z.strictObject({status:z.literal('additional'),div:value.refine(v=>
   /^<div xmlns="http:\/\/www\.w3\.org\/1999\/xhtml"><p>(?:[^<&]|&(?:amp|lt|gt|quot|apos);|<br\/>)+<\/p><\/div>$/u.test(v))});
-const identified=namespace=>z.array(z.strictObject({system:z.literal(`urn:vaultmed:demo:${namespace}`),value:id})).length(1);
+const identified=namespace=>z.array(z.strictObject({system:z.literal(`urn:vellum:demo:${namespace}`),value:id})).length(1);
 const code=(system,values)=>z.strictObject({coding:z.array(z.strictObject({system:z.literal(`http://terminology.hl7.org/CodeSystem/${system}`),code:z.enum(values)})).length(1)});
 const base={id:uuid,text:narrativeSchema};
 const resourceSchema=z.discriminatedUnion('resourceType',[
@@ -128,7 +128,7 @@ const resourceSchema=z.discriminatedUnion('resourceType',[
     clinicalStatus:code('condition-clinical',['active','resolved']).optional(),verificationStatus:code('condition-ver-status',['confirmed','unconfirmed']),recordedDate:timestamp}),
 ]);
 const bundleSchema=z.strictObject({resourceType:z.literal('Bundle'),type:z.literal('document'),
-  identifier:z.strictObject({system:z.literal('urn:vaultmed:demo:documents'),value:uuid}),timestamp,meta:z.strictObject({lastUpdated:timestamp}),
+  identifier:z.strictObject({system:z.literal('urn:vellum:demo:documents'),value:uuid}),timestamp,meta:z.strictObject({lastUpdated:timestamp}),
   entry:z.array(z.strictObject({fullUrl:url,resource:resourceSchema})).min(4).max(24)});
 export function preflightFHIR(bundle,summary,source) {
   try {

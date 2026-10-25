@@ -99,6 +99,15 @@ test('D10 storage scope: standalone verified backup, changed recovery branch, en
   await assert.rejects(()=>backupDatabase(f.file,backup),error=>error.code==='DESTINATION_EXISTS');
 });
 
+test('Vellum backup compatibility: new manifests use Vellum and legacy manifests still restore verified chains',async t=>{
+  const f=await fixture(t),backup=path.join(f.directory,'brand-checkpoint.sqlite3'),restored=path.join(f.directory,'brand-restored.sqlite3');
+  const heads=verifyChains(f.store.db);f.store.close();
+  assert.equal((await backupDatabase(f.file,backup)).format,'vellum-backup-v1');
+  const manifest=JSON.parse(await readFile(`${backup}.manifest.json`,'utf8'));
+  await writeFile(`${backup}.manifest.json`,JSON.stringify({...manifest,format:'vaultmed-backup-v1'}));
+  assert.deepEqual((await restoreDatabase(backup,restored)).clinical_heads,heads);
+});
+
 test('D10 storage scope: corrupted checksum/manifest never creates a restored destination',async t=>{
   const f=await fixture(t);f.store.close();const backup=path.join(f.directory,'checkpoint.sqlite3');
   await backupDatabase(f.file,backup);
@@ -138,7 +147,7 @@ test('D01/D11 maintenance CLI: private stdin initialization, alternate cwd, veri
   const initialized=await command(['init','--db',file,'--seed','opd-demo-v1','--passwords-stdin'],{cwd:dir,input:JSON.stringify(testPasswords)});
   assert.equal(initialized.code,0,initialized.stderr);assert.equal(JSON.parse(initialized.stdout).status,'INITIALIZED');
   for(const secret of Object.values(testPasswords)) assert.equal(`${initialized.stdout}${initialized.stderr}`.includes(secret),false);
-  const verified=await command(['verify','--db',file],{cwd:dir,env:{VAULTMED_DB_PATH:'../invalid-unused-default'}});
+  const verified=await command(['verify','--db',file],{cwd:dir,env:{VELLUM_DB_PATH:'../invalid-unused-default'}});
   assert.equal(verified.code,0,verified.stderr);assert.equal(JSON.parse(verified.stdout).status,'VERIFIED');
   const replay=await command(['init','--db',file]);assert.equal(JSON.parse(replay.stdout).status,'ALREADY_INITIALIZED');
   const rejected=await command(['init','--db',path.join(dir,'no-password.sqlite3')]);

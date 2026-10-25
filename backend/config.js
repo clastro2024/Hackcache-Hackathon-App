@@ -47,17 +47,17 @@ export function isWithin(root, target) {
     relative !== '..' && !path.isAbsolute(relative));
 }
 
-export function resolveDatabasePath(value = 'data/runtime/vaultmed.sqlite3') {
-  const text = setting(value, 'VAULTMED_DB_PATH');
+export function resolveDatabasePath(value = 'data/runtime/vellum.sqlite3') {
+  const text = setting(value, 'VELLUM_DB_PATH');
   // No URI, network share, alternate data stream or query-string path.
   if (!text || text.startsWith('\\\\') || text.startsWith('//') ||
       /[?#\x00-\x1f]/u.test(text) || text.slice(2).includes(':')) {
-    throw new ConfigurationError('VAULTMED_DB_PATH');
+    throw new ConfigurationError('VELLUM_DB_PATH');
   }
   const resolved = path.resolve(APP_ROOT, text);
   if (!isWithin(path.join(APP_ROOT, 'data'), resolved) ||
       resolved === path.join(APP_ROOT, 'data')) {
-    throw new ConfigurationError('VAULTMED_DB_PATH');
+    throw new ConfigurationError('VELLUM_DB_PATH');
   }
   return resolved;
 }
@@ -97,7 +97,8 @@ export function loadSarvamSettings(env=process.env) {
 }
 
 export function loadStorageSettings(env = process.env) {
-  return Object.freeze({ appRoot: APP_ROOT, dbPath: resolveDatabasePath(env.VAULTMED_DB_PATH) });
+  // Keep previously configured datasets usable without renaming/moving their files.
+  return Object.freeze({ appRoot: APP_ROOT, dbPath: resolveDatabasePath(env.VELLUM_DB_PATH ?? env.VAULTMED_DB_PATH) });
 }
 
 export function loadServerSettings(env = process.env) {

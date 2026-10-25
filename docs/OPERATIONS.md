@@ -4,7 +4,7 @@ This document is self-contained for the App repository. It describes implemented
 
 ## Reproducible local runtime
 
-Use Node 24, `npm ci`, `npm run check:environment`, `npm run build`, then `npm test` as described in the README. Preserve an existing private .env. No install/build/start/test command initializes the working database or contacts an AI provider. Explicitly initialize through `npm run manage -- init --db data/runtime/vaultmed.sqlite3 --seed opd-demo-v1`, privately supplying the seven fixed account passwords. Then `npm start` verifies the existing file/map/public inputs and starts one listener.
+Use Node 24, `npm ci`, `npm run check:environment`, `npm run build`, then `npm test` as described in the README. Preserve an existing private .env. No install/build/start/test command initializes the working database or contacts an AI provider. Explicitly initialize through `npm run manage -- init --db data/runtime/vellum.sqlite3 --seed opd-demo-v1`, privately supplying the seven fixed account passwords. Then `npm start` verifies the existing file/map/public inputs and starts one listener.
 
 Storage is one better-sqlite3 connection, WAL, synchronous FULL, foreign_keys ON and busy_timeout 50 ms. The database path must remain inside the App's allowed private data directories. Preserve the file and its SQLite sidecars together during ordinary operation; use stopped, verified maintenance rather than copying an active file. Backup/restore/reset commands and their new-path rules are in the README. Restore ends recovered access and pauses queues for reconciliation; it does not switch configuration automatically.
 

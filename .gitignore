@@ -11,6 +11,7 @@ node_modules/
 *.p12
 *.pfx
 /vaultmed-passwords.json
+/vellum-passwords.json
 
 # Persistent and generated private data; credential-free fixture sources are tracked
 data/runtime/*

@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { constants,openSync,closeSync,lstatSync,fstatSync,readSync,writeFileSync,renameSync,unlinkSync,existsSync } from 'node:fs';
+import { lstatSync,writeFileSync,renameSync,unlinkSync,existsSync } from 'node:fs';
 import { z } from 'zod';
 import { resolveSarvamAccessFile,SARVAM_RENDER_ACCESS_FILE } from './config.js';
 import { privatePath,requireStorage } from './db.js';
 import { timestamp } from './schemas.js';
 import { parseJSON } from './services/vault.js';
+import { readPrivateFile } from './private-file.js';
 
 const schema=z.strictObject({schema_version:z.literal('sarvam-free-access-v1'),operator_verified:z.literal(true),
   promotional_credit_remaining_inr:z.number().finite().positive(),verified_at:timestamp,expires_at:timestamp,no_paid_fallback:z.literal(true)});
@@ -14,24 +15,16 @@ const validTime=(value,now)=>Date.parse(value.verified_at)<=now&&now<Date.parse(
 
 // A manual confirmation, not a balance API. Read afresh at each provider admission.
 export function creditStatus(now=Date.now(),filename) {
-  let fd;
   try {
     const resolved=resolveSarvamAccessFile(filename);
-    const file=resolved===SARVAM_RENDER_ACCESS_FILE?resolved:privatePath(resolved),stat=lstatSync(file);
-    if(!stat.isFile()||stat.isSymbolicLink()||stat.size>4096)throw Error('INVALID');
-    fd=openSync(file,constants.O_RDONLY|(constants.O_NOFOLLOW??0));const opened=fstatSync(fd);
-    if(!opened.isFile()||!sameFile(opened,stat))throw Error('INVALID');
-    const bytes=Buffer.alloc(4097);let length=0;
+    const file=resolved===SARVAM_RENDER_ACCESS_FILE?resolved:privatePath(resolved),bytes=readPrivateFile(file,4096);
     try {
-      while(length<bytes.length){const count=readSync(fd,bytes,length,bytes.length-length,length);if(!count)break;length+=count;}
-      if(length>4096)throw Error('INVALID');
-      const value=schema.parse(parseJSON(new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(0,length)),4096));
+      const value=schema.parse(parseJSON(new TextDecoder('utf-8',{fatal:true}).decode(bytes),4096));
       if(!validTime(value,now))return {available:false,reason:'CREDIT_CONFIRMATION_EXPIRED_OR_FUTURE'};
       return {available:true,reason:null,verified_at:value.verified_at,expires_at:value.expires_at,
         operator_reported_credit_inr:value.promotional_credit_remaining_inr};
     }finally{bytes.fill(0);}
-  }catch(error){return {available:false,reason:error.code==='ENOENT'?'CREDIT_CONFIRMATION_MISSING':'CREDIT_CONFIRMATION_INVALID'};}
-  finally{if(fd!==undefined)closeSync(fd);}
+  }catch(error){return {available:false,reason:['ENOENT','PRIVATE_FILE_MISSING'].includes(error.code)?'CREDIT_CONFIRMATION_MISSING':'CREDIT_CONFIRMATION_INVALID'};}
 }
 export const freeAccess=(now=Date.now(),file)=>creditStatus(now,file).available;
 

@@ -19,7 +19,7 @@ function hotspots(profile) {
 }
 process.once('message',async message=>{
   try {
-    const settings=loadServerSettings({FRONTEND_ORIGIN:'http://127.0.0.1:3000',API_ORIGIN:'http://127.0.0.1:3000',VAULTMED_DB_PATH:message.db});
+    const settings=loadServerSettings({FRONTEND_ORIGIN:'http://127.0.0.1:3000',API_ORIGIN:'http://127.0.0.1:3000',VELLUM_DB_PATH:message.db});
     runtime=await startServer({...settings,port:0});
     if(message.profile){const {Session}=await import('node:inspector/promises');profiler=new Session();profiler.connect();await profiler.post('HeapProfiler.startSampling',{
       samplingInterval:32768,includeObjectsCollectedByMajorGC:true,includeObjectsCollectedByMinorGC:true});}

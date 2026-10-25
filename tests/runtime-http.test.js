@@ -12,7 +12,7 @@ import { verifyChains } from '../backend/services/vault.js';
 import { putReceipt, fingerprint } from '../backend/services/audit.js';
 
 const origin='http://127.0.0.1:3000';
-const settingsFor=(f,port=3000)=>loadServerSettings({FRONTEND_ORIGIN:origin,API_ORIGIN:origin,VAULTMED_DB_PATH:f.file,PORT:String(port)});
+const settingsFor=(f,port=3000)=>loadServerSettings({FRONTEND_ORIGIN:origin,API_ORIGIN:origin,VELLUM_DB_PATH:f.file,PORT:String(port)});
 test('R01/R04 startup scope: existing verified map required; optional ASR and seed absence do not break manual readiness',async t=>{
   const f=await fixture(t);f.store.close();const directory=path.join(f.directory,'runtime-fixtures');await mkdir(directory);
   await copyFile(path.join(APP_ROOT,'data/fixtures/facility_map.json'),path.join(directory,'facility_map.json'));

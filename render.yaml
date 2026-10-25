@@ -2,8 +2,9 @@
 # App/ is an independent repository: leave Render's root directory empty.
 services:
   - type: web
-    name: vaultmed
+    name: vellum
     runtime: node
+    branch: main
     plan: 0.5c-512mb
     region: singapore
     numInstances: 1
@@ -12,7 +13,7 @@ services:
     startCommand: npm run deploy:start
     healthCheckPath: /api/v1/health/ready
     disk:
-      name: vaultmed-runtime
+      name: vellum-runtime
       mountPath: /opt/render/project/src/data/runtime
       sizeGB: 1
     envVars:
@@ -24,17 +25,17 @@ services:
         value: 0.0.0.0
       - key: WEB_CONCURRENCY
         value: "1"
-      - key: VAULTMED_DB_PATH
-        value: data/runtime/vaultmed.sqlite3
+      - key: VELLUM_DB_PATH
+        value: data/runtime/vellum.sqlite3
       - key: FRONTEND_ORIGIN
         fromService:
           type: web
-          name: vaultmed
+          name: vellum
           envVarKey: RENDER_EXTERNAL_URL
       - key: API_ORIGIN
         fromService:
           type: web
-          name: vaultmed
+          name: vellum
           envVarKey: RENDER_EXTERNAL_URL
       - key: PUBLIC_API_BASE_URL
         value: /api/v1

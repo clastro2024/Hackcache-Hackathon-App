@@ -1,6 +1,19 @@
 # Render deployment candidate
 
-Prepared for the independent App repository. No Render service, disk, payment or domain has been created. Local live Sarvam checks passed; this Blueprint now selects credit-gated text AI with a private key prompt and operator-supplied credit secret file. Frontend–backend integration is deferred. This is a reviewable configuration, not proof that the application has run on Render.
+Prepared for the independent App repository on `main`. No Render service, disk, payment or domain has been created by this preparation. Local page/API integration and stubbed browser checks passed; final frontend acceptance and hosted verification remain separate. The Blueprint selects credit-gated Sarvam text with a private key prompt and operator-supplied credit secret file. This is a reviewable configuration, not proof that the application has run on Render.
+
+## Prepare now; deploy after final frontend acceptance
+
+1. Sign in to Render and connect GitHub with access to `clastro2024/Hackcache-Hackathon-App`. Use this repository's `main` branch and root `render.yaml`; leave Root Directory blank. The Blueprint now explicitly pins `main` and keeps automatic deploys off.
+2. Review the paid single-service/1 GB disk setup and current dashboard price before creating resources. Singapore is selected. Use the provided `onrender.com` URL initially; a custom domain is optional. No separate frontend/static service or Postgres database is required for this SQLite MVP.
+3. Prepare seven independent fictional-account passwords in a password manager. At deployment, supply the private `vellum-passwords.json` secret file described below. Do not upload the local preview database, preview credentials file or `.env`.
+4. Have the Sarvam key ready privately. Generate its credit confirmation only near deployment, after a fresh dashboard check; confirmations expire within 24 hours. The current Blueprint needs both the private API key and the separate `sarvam-free-access.json` secret for live text. Offline operation is possible by deliberately selecting `SARVAM_ENABLED=false`.
+5. When the final frontend changes are pushed to `main`, follow the first-initialization sequence below. Use `npm run deploy:initialize` once, then restore `npm run deploy:start` and remove only the bootstrap password secret. Keep the separate credit secret while using AI.
+6. Before sharing the URL, check login/independent-profile consent, queue, exact review/commit, downloads and restart persistence. This final hosted check cannot be completed before the service exists.
+
+Current repository preparation adds no deployment SDK/framework, no automatic seed/reset and no provider calls. Creating the service/disk incurs charges; do not click Deploy Blueprint merely to connect the account before you intend to provision resources. [Blueprint setup](https://render.com/docs/infrastructure-as-code), [persistent disks](https://render.com/docs/disks), [private secrets](https://render.com/docs/configure-environment-variables#secret-files).
+
+Preparation check on 25 October 2026: the main-pinned Blueprint passed Render's current official JSON Schema validation. The affected deployment-admission test passed 1/1 (531.8753 ms total native run), with no database initialization or provider call. The private Python validator is an existing development-only tool, not a deployment dependency. No runtime source or dependency changed in this preparation; no Render resource was created.
 
 ## What is ready, and what "unapplied" means
 
@@ -8,9 +21,9 @@ The repository-side deployment setup is prepared: render.yaml, the Node pin, loc
 
 "Unapplied" means nobody has yet connected this configuration to a Render service, provisioned its disk or run the application there. It does not mean the deployment files are absent. Repository preparation cannot establish the outcome of a first hosted build or disk/browser check.
 
-After frontend–backend integration and local acceptance, the path is:
+After final frontend acceptance, the path is:
 
-1. Commit/push the reviewed **App repository**, then connect that repository/branch through Render's New > Blueprint flow using its root render.yaml. This is deployment of the full Node application, not a static-file upload. [Blueprint setup](https://render.com/docs/infrastructure-as-code#setup).
+1. Commit/push the reviewed **App repository's main branch**, then connect that repository/branch through Render's New > Blueprint flow using its root render.yaml. This is deployment of the full Node application, not a static-file upload. [Blueprint setup](https://render.com/docs/infrastructure-as-code#setup).
 2. Provision the configured single service/runtime disk and supply the private fictional-account password file described below.
 3. Run the one-time `npm run deploy:initialize`, switch back to `npm run deploy:start`, and remove the bootstrap secret file.
 4. Verify readiness, login, the integrated journey, restart persistence and recovery on the actual hosted URL.
@@ -31,7 +44,7 @@ One native Node service serves the existing public pages/assets and /api/v1 at t
 
 | Setting | Candidate |
 | --- | --- |
-| Repository | App's independent Git repository; root directory blank, not App |
+| Repository | App's independent Git repository, main branch; root directory blank, not App |
 | Runtime | Node 24.22.1, also pinned in .node-version |
 | V8 nursery | Serving npm commands select --max-semi-space-size=1; no old-space/RSS cap or forced GC; see OPERATIONS.md |
 | Build | npm ci --include=dev && npm run check:environment && npm run build |
@@ -39,7 +52,7 @@ One native Node service serves the existing public pages/assets and /api/v1 at t
 | Health path | /api/v1/health/ready |
 | Listener | HOST=0.0.0.0; Render-supplied PORT (usually 10000) |
 | Storage mount | /opt/render/project/src/data/runtime |
-| Database | data/runtime/vaultmed.sqlite3 |
+| Database | data/runtime/vellum.sqlite3 |
 | Frontend/API origin | Both alias this service's RENDER_EXTERNAL_URL |
 | Public API base | /api/v1 |
 | Workers | WEB_CONCURRENCY=1; numInstances=1 |
@@ -52,11 +65,11 @@ Mount runtime rather than all of data: mounting data would hide the tracked fixt
 ## Provisioning and explicit first initialization
 
 1. Review the paid candidate and current pricing, then use this repository's render.yaml in Render. Nothing in this preparation applies it. Keep automatic deploys off. The first normal launch intentionally refuses a missing database; this is not permission to auto-seed during restart.
-2. In the Render service's Environment page, add a secret file named vaultmed-passwords.json. Its contents must be a strict JSON object with exactly the seven usernames staff, doctor12, doctor18 and patient-a through patient-d, each mapped to a private 12–128-character password. Use independent fictional-account passwords. The complete file must be <=8 KiB. Do not paste it in Git, command arguments, chat or logs. Render exposes it at /etc/secrets/vaultmed-passwords.json; remove it after initialization. [Secret files](https://render.com/docs/configure-environment-variables#secret-files).
+2. In the Render service's Environment page, add a secret file named vellum-passwords.json. Its contents must be a strict JSON object with exactly the seven usernames staff, doctor12, doctor18 and patient-a through patient-d, each mapped to a private 12–128-character password. Use independent fictional-account passwords. The complete file must be <=8 KiB. Do not paste it in Git, command arguments, chat or logs. Render exposes it at /etc/secrets/vellum-passwords.json; remove it after initialization. [Secret files](https://render.com/docs/configure-environment-variables#secret-files).
 3. For this first initialization only, temporarily set Start Command to `npm run deploy:initialize`, then deploy the reviewed build. This explicit command validates deployment configuration, reads the bounded private file, initializes a new fictional database and starts the normal protected listener. It refuses an existing database and never overwrites/reuses it as a new seed. A failed initialization/deploy must be inspected, not automatically retried as a reset.
 4. Immediately change Start Command back to `npm run deploy:start`, remove the initialization secret file, and deploy again. Confirm readiness and persistence. Leaving the initialization command selected will fail on ordinary restart because the database already exists; changing back is required. Do not put initialization in buildCommand, preDeployCommand or initialDeployHook.
 5. Confirm the two origin aliases resolved to the same exact HTTPS service URL. If using a custom domain, explicitly set FRONTEND_ORIGIN and API_ORIGIN to that same origin and deploy; do not derive authority from request Host/forwarded headers. PUBLIC_API_BASE_URL stays /api/v1. The candidate requires mock voice, one worker and a database path under the runtime mount. Enabled text needs a server key; actual requests additionally need the valid credit file below. `npm run deploy:check` checks configuration without opening/creating a database or contacting a provider; CREDIT_GATED does not prove available credit or a mounted disk.
-6. Complete the hosted checks below before treating the URL as validated. Pages may still need frontend–backend integration; a healthy backend does not establish a connected patient journey.
+6. Complete the hosted checks below before treating the URL as validated. Local page/API integration is checked; a healthy hosted backend alone does not establish the hosted patient journey.
 
 scripts/render-start.js has no unauthenticated initialization route, default credentials or implicit seed-on-missing behavior. Initialization credentials are not retained by the app as a file or receipt; their Argon2 hashes belong in SQLite. JavaScript strings cannot be reliably erased from process memory. The one-time command's buffer is cleared after hashing, and ordinary serving needs no bootstrap secret.
 
@@ -64,7 +77,7 @@ scripts/render-start.js has no unauthenticated initialization route, default cre
 
 1. Supply SARVAM_API_KEY through Render's private environment prompt (sync:false in the Blueprint). Never put its value into Git, HTML, a public build variable or logs. The Blueprint selects SARVAM_ENABLED=true; to run wholly offline, deliberately set it false in the reviewed Blueprint/service configuration.
 2. After verifying positive promotional credit in the Sarvam dashboard, run `npm run ai -- credit --balance-inr <actual-verified-amount> --hours 24` locally. Add --replace only when deliberately replacing an existing confirmation. This creates private data/runtime/sarvam-free-access.json, containing confirmation metadata and no API key.
-3. Add a Render secret file named **sarvam-free-access.json** containing that generated JSON. Its fixed runtime path is /etc/secrets/sarvam-free-access.json, already selected by SARVAM_ACCESS_FILE. Keep this credit file available; it is separate from the temporary vaultmed-passwords.json database-bootstrap secret, which must still be removed after initialization. [Render secret files](https://render.com/docs/configure-environment-variables#secret-files).
+3. Add a Render secret file named **sarvam-free-access.json** containing that generated JSON. Its fixed runtime path is /etc/secrets/sarvam-free-access.json, already selected by SARVAM_ACCESS_FILE. Keep this credit file available; it is separate from the temporary vellum-passwords.json database-bootstrap secret, which must still be removed after initialization. [Render secret files](https://render.com/docs/configure-environment-variables#secret-files).
 4. Deploy/restart after setting private environment or secret files. Missing/expired/invalid credit disables provider requests while manual/queue/local functionality stays usable. Renew only after another actual dashboard credit check, then replace the secret-file contents and deploy. The timestamp lifetime is at most 24 hours; there is no automatic renewal or paid fallback.
 
 Admission accepts enabled text with a configured server key. It does not claim a valid balance just because a key is present. No startup/health/build/ordinary test calls Sarvam. One in-flight call, three/minute and thirty/dataset durable reservations, source/consent gates and clinician review remain unchanged. No hosted Sarvam call has been tested yet; see AI.md for local results. A hosted key/credit setup is required in addition to the database's synthetic account setup.
@@ -82,7 +95,7 @@ npm run deploy:maintenance -- backup --out data/runtime/backups/checkpoint-001.s
 
 Use a new backup path each time. Change Start Command back to `npm run deploy:start` after success. The wrapper suppresses management result contents in service logs; failure emits a safe code and does not open a listener. It accepts only verify, backup and restore, preserving the existing CLI/path/lease checks. Ordinary local management commands stay independent of browser settings.
 
-For restore, retain the old database and backup/manifest. Set VAULTMED_DB_PATH to a new runtime file, and temporarily select, for example:
+For restore, retain the old database and backup/manifest. Set VELLUM_DB_PATH to a new runtime file, and temporarily select, for example:
 
 ```text
 npm run deploy:maintenance -- restore --backup data/runtime/backups/checkpoint-001.sqlite3 --new-db data/runtime/restored-001.sqlite3

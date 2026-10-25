@@ -151,7 +151,7 @@ async function fileDigest(file) {
   for await (const chunk of createReadStream(file,{highWaterMark:65536})) hashState.update(chunk);
   return hashState.digest('hex');
 }
-const manifestSchema = z.strictObject({ format:z.literal('vaultmed-backup-v1'),snapshot_at:z.iso.datetime(),
+const manifestSchema = z.strictObject({ format:z.enum(['vellum-backup-v1','vaultmed-backup-v1']),snapshot_at:z.iso.datetime(),
   sqlite_version:z.string().regex(/^\d+\.\d+\.\d+$/u),backup_sha256:hash,schema_version:z.literal(1),
   dataset_id:id,facility_id:id,seed_label:z.literal('opd-demo-v1'),map_version:id,
   counts:z.record(z.string(),integer),last_audit_id:integer,
@@ -171,7 +171,7 @@ export async function backupDatabase(value, output, { now = Date.now() } = {}) {
     const sqliteVersion = db.prepare('SELECT sqlite_version() version').get().version;
     candidate.close(); candidate = null;
     requireStorage(!existsSync(`${file}-wal`) && !existsSync(`${file}-shm`),'BACKUP_NOT_STANDALONE');
-    const manifest = manifestSchema.parse({format:'vaultmed-backup-v1',snapshot_at:new Date(now).toISOString(),
+    const manifest = manifestSchema.parse({format:'vellum-backup-v1',snapshot_at:new Date(now).toISOString(),
       sqlite_version:sqliteVersion,backup_sha256:await fileDigest(file),...verified});
     writeFileSync(`${file}.manifest.json`,`${canonicalJSON(manifest)}\n`,{flag:'wx',mode:0o600});
     return {status:'BACKUP_VERIFIED',backup:path.relative(APP_ROOT,file),...manifest};

@@ -36,7 +36,7 @@ test('D/S audit download HTTP: final fixed snapshot includes intervening own row
     }
   });
   const result=await f.patient.get(exportPath);assert.equal(result.status,200,JSON.stringify(result.body));
-  assert.match(result.headers.get('Content-Disposition'),/attachment; filename="vaultmed-audit-[a-f0-9-]+\.json"/u);
+  assert.match(result.headers.get('Content-Disposition'),/attachment; filename="vellum-audit-[a-f0-9-]+\.json"/u);
   const {content,sha256}=result.body;
   assert.equal(digest(Buffer.from(canonicalJSON(content),'utf8')),sha256);assert.equal(result.headers.get('X-Export-ID'),content.generation_id);
   assert.equal(content.complete_through_bound,true);assert.equal(content.chain_check.status,'PASS');assert.equal(content.audit_export_schema_version,'patient-audit-v1');

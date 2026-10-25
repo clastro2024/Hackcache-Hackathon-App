@@ -9,7 +9,7 @@ npm ci
 Copy-Item .env.example .env
 npm run check:environment
 npm run build
-npm run manage -- init --db data/runtime/vaultmed.sqlite3 --seed opd-demo-v1
+npm run manage -- init --db data/runtime/vellum.sqlite3 --seed opd-demo-v1
 npm start
 ```
 

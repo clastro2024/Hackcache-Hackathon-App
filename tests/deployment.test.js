@@ -10,9 +10,9 @@ import { loadServerSettings,APP_ROOT } from '../backend/config.js';
 import { fixture } from './helpers.js';
 import { startServer } from '../backend/server.js';
 
-const origin='https://vaultmed.example.test';
+const origin='https://vellum.example.test';
 const envFor=db=>({HOST:'0.0.0.0',PORT:'10000',FRONTEND_ORIGIN:origin,API_ORIGIN:origin,
-  VAULTMED_DB_PATH:db,PUBLIC_API_BASE_URL:'/api/v1',WEB_CONCURRENCY:'1',USE_MOCK_ASR:'true',SARVAM_ENABLED:'false'});
+  VELLUM_DB_PATH:db,PUBLIC_API_BASE_URL:'/api/v1',WEB_CONCURRENCY:'1',USE_MOCK_ASR:'true',SARVAM_ENABLED:'false'});
 
 test('R deployment admission: same-origin HTTPS, one worker, private disk, mock voice and gated text AI',async()=>{
   const file=`data/runtime/deploy-check-${randomUUID()}.sqlite3`,env=envFor(file);
@@ -21,7 +21,7 @@ test('R deployment admission: same-origin HTTPS, one worker, private disk, mock 
   for(const [patch,code] of [[{FRONTEND_ORIGIN:'https://other.example.test'},'DEPLOYMENT_SAME_ORIGIN_REQUIRED'],
     [{PUBLIC_API_BASE_URL:'https://other.example.test/api/v1'},'DEPLOYMENT_SAME_ORIGIN_REQUIRED'],
     [{WEB_CONCURRENCY:'2'},'DEPLOYMENT_SINGLE_PROCESS_REQUIRED'],[{SARVAM_ENABLED:'true'},'DEPLOYMENT_AI_KEY_REQUIRED'],
-    [{USE_MOCK_ASR:'false'},'DEPLOYMENT_MOCK_VOICE_REQUIRED'],[{VAULTMED_DB_PATH:'data/backups/not-runtime.sqlite3'},'DEPLOYMENT_DISK_PATH_REQUIRED']]) {
+    [{USE_MOCK_ASR:'false'},'DEPLOYMENT_MOCK_VOICE_REQUIRED'],[{VELLUM_DB_PATH:'data/backups/not-runtime.sqlite3'},'DEPLOYMENT_DISK_PATH_REQUIRED']]) {
     const changed={...env,...patch};assert.throws(()=>deploymentCheck(loadServerSettings(changed),changed),{code});
   }
   const live={...env,SARVAM_ENABLED:'true',SARVAM_API_KEY:'private-stub-key',SARVAM_ACCESS_FILE:'/etc/secrets/sarvam-free-access.json'};
@@ -82,7 +82,7 @@ test('R/D deployment maintenance: stopped runtime verify/backup/restore, live-ow
   assert.equal((await deploymentMaintenance(['backup','--out',backup],env)).status,'BACKUP_VERIFIED');
   await assert.rejects(()=>deploymentMaintenance(['restore','--backup',backup,'--new-db',restored],env),{code:'DEPLOYMENT_RESTORE_TARGET_MISMATCH'});
   assert.equal(existsSync(restored),false);
-  const recovered=await deploymentMaintenance(['restore','--backup',backup,'--new-db',restored],{...env,VAULTMED_DB_PATH:restored});
+  const recovered=await deploymentMaintenance(['restore','--backup',backup,'--new-db',restored],{...env,VELLUM_DB_PATH:restored});
   assert.equal(recovered.status,'RESTORED');assert.notEqual(recovered.dataset_id,verified.dataset_id);
   assert.equal(existsSync(f.file),true);await assert.rejects(()=>deploymentMaintenance(['reset'],env),{code:'INVALID_COMMAND_OPTION'});
 });

@@ -8,7 +8,8 @@ import { retryUnit } from './db.js';
 import { appendAudit, findReceipt, putReceipt, fingerprint } from './services/audit.js';
 import { digest, parseJSON } from './services/vault.js';
 
-export const SESSION_COOKIE = 'vaultmed_session';
+export const SESSION_COOKIE = 'vellum_session';
+const legacySessionCookie='vaultmed_session';
 const roomIdsSchema=z.array(id).max(10);
 const permissionsSchema=z.array(z.string()).max(20);
 const grantScopesSchema=z.array(z.enum(scopes)).max(5);
@@ -17,18 +18,20 @@ const permissions = {
   CLINICIAN:['queue:operate','clinical:write','emergency:read'], PATIENT:['patient:self','consent:decide'],
 };
 export function cookieReference(header='') {
-  if(typeof header!=='string' || header.length>4096 ||
-    header.split(';').filter(part=>part.split('=')[0].trim()===SESSION_COOKIE).length!==1) return null;
+  if(typeof header!=='string' || header.length>4096) return null;
+  const names=header.split(';').map(part=>part.split('=')[0].trim());
+  const selected=names.includes(SESSION_COOKIE)?SESSION_COOKIE:legacySessionCookie;
+  if(names.filter(name=>name===selected).length!==1) return null;
   let secret;
-  try {secret=cookie.parseCookie(header)[SESSION_COOKIE];} catch {return null;}
+  try {secret=cookie.parseCookie(header)[selected];} catch {return null;}
   return /^[A-Za-z0-9_-]{43}$/u.test(secret ?? '')?Object.freeze({secretHash:digest(secret)}):null;
 }
-export function sessionCookie(settings,secret,expiresAt,now) {
-  return cookie.stringifySetCookie({name:SESSION_COOKIE,value:secret,path:'/',httpOnly:true,
+export function sessionCookie(settings,secret,expiresAt,now,name=SESSION_COOKIE) {
+  return cookie.stringifySetCookie({name,value:secret,path:'/',httpOnly:true,
     secure:!settings.loopbackHttp,sameSite:'strict',expires:new Date(expiresAt),
     maxAge:Math.max(0,Math.min(7200,Math.floor((expiresAt-now)/1000)))});
 }
-export const clearSessionCookie = settings => sessionCookie(settings,'',0,0);
+export const clearSessionCookie = settings => [sessionCookie(settings,'',0,0),sessionCookie(settings,'',0,0,legacySessionCookie)];
 
 export function createLimiter({limit,windowMs=60000,capacity=1000,now}) {
   const entries=new Map();
