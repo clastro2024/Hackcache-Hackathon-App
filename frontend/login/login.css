@@ -1,15 +1,218 @@
-.login-shell { max-width: 40rem; margin-block: 1.5rem; }
-.login-notice:not(:empty) { margin-block-end: var(--space-6); }
-.demo-account-list { display: grid; gap: 1.5rem; }
-.demo-account-group { display: grid; gap: .5rem; }
-.demo-account-group .section-label { margin-block-end: .25rem; }
-.demo-account-button { display: flex; align-items: center; gap: 1rem; width: 100%; min-height: 4rem; padding: .75rem 1rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); text-align: start; }
-.demo-account-button:hover:not(:disabled), .demo-account-button:focus-visible { border-color: var(--color-primary); background: var(--color-tint); }
-.demo-account-button > .icon { flex: 0 0 auto; color: var(--color-primary); }
-.demo-account-button > .icon:last-child { width: 1.125rem; transform: rotate(-90deg); }
-.demo-account-button:disabled { opacity: .65; }
-.demo-account-copy { display: grid; flex: 1; gap: .125rem; min-width: 0; }
-.demo-account-name, .demo-account-copy .patient-name { font-size: 1rem; font-weight: 500; }
-.demo-account-copy .muted { font-size: .875rem; }
-.demo-account-note { margin-block-start: 1.25rem; }
-@media (max-width: 40rem) { .login-shell { margin-block: .75rem; } .demo-account-button { padding-inline: .75rem; } }
+.login-shell {
+  max-width: 78rem;
+  width: 100%;
+  margin-inline: auto;
+  margin-block: 2rem;
+  padding-inline: 1.5rem;
+}
+
+.login-notice:not(:empty) {
+  margin-block-end: var(--space-6);
+}
+
+.page-heading {
+  margin-block-end: 2rem;
+}
+
+.page-heading h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+}
+
+.page-heading .page-intro {
+  font-size: 1.0625rem;
+  color: var(--color-muted);
+  margin-block-start: 0.25rem;
+}
+
+/* 3-Column side-by-side grid */
+.demo-account-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+/* The 3 Individual Role Cards */
+.demo-account-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px -2px rgba(22, 93, 102, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast);
+}
+
+.demo-account-card:hover {
+  border-color: var(--color-border-control);
+  box-shadow: 0 8px 24px -4px rgba(22, 93, 102, 0.1), 0 3px 8px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Card Header */
+.demo-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-block-end: 0.875rem;
+  border-block-end: 1px solid var(--color-border-subtle);
+}
+
+.demo-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.demo-card-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.demo-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin: 0;
+  flex: 1;
+  letter-spacing: -0.01em;
+}
+
+.demo-card-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.demo-card-badge--clinician {
+  background: var(--color-tint);
+  color: var(--color-primary);
+  border: 1px solid rgba(22, 93, 102, 0.25);
+}
+
+.demo-card-badge--staff {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border: 1px solid rgba(36, 88, 166, 0.25);
+}
+
+.demo-card-badge--patient {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid rgba(35, 103, 67, 0.25);
+}
+
+.demo-card-subtitle {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Button List Container */
+.demo-card-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+/* Interactive Account Buttons */
+.demo-account-button {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 3.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--motion-fast), border-color var(--motion-fast), transform var(--motion-fast);
+}
+
+.demo-account-button:hover:not(:disabled),
+.demo-account-button:focus-visible {
+  border-color: var(--color-primary);
+  background: var(--color-tint);
+  transform: translateY(-1px);
+}
+
+.demo-account-button > .icon {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.demo-account-button > .icon:last-child {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-muted);
+  transform: rotate(-90deg);
+  transition: transform var(--motion-fast), color var(--motion-fast);
+}
+
+.demo-account-button:hover:not(:disabled) > .icon:last-child {
+  color: var(--color-primary);
+  transform: rotate(-90deg) translateX(-2px);
+}
+
+.demo-account-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.demo-account-copy {
+  display: grid;
+  flex: 1;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.demo-account-name,
+.demo-account-copy .patient-name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.demo-account-copy .muted {
+  font-size: 0.8125rem;
+  color: var(--color-muted);
+}
+
+.demo-account-note {
+  margin-block-start: 2rem;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+/* Responsive: stack to single column on mobile/tablet */
+@media (max-width: 62rem) {
+  .demo-account-list {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .login-shell {
+    max-width: 34rem;
+    margin-block: 1rem;
+    padding-inline: 1rem;
+  }
+
+  .demo-account-card {
+    padding: 1.25rem;
+  }
+}
