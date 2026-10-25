@@ -31,8 +31,10 @@
 .queue-directions-trigger > .icon:last-child { margin-inline-start: .25rem; transform: rotate(180deg); }
 .queue-map-note { margin-block-start: .75rem; }
 .visit-directions { margin-block-start: 1.25rem; padding-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); transform-origin: top left; }
-.visit-directions:not([hidden]) { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.visit-directions:not([hidden]) > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.visit-directions:not([hidden]):not(.popup-closing) { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.visit-directions:not([hidden]):not(.popup-closing) > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.visit-directions.popup-closing { animation: popup-box-collapse 190ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both !important; overflow: hidden; pointer-events: none; }
+.visit-directions.popup-closing > * { animation: popup-content-fade-out 100ms ease-in forwards !important; }
 .visit-directions h2 { font-size: calc(1.125rem * var(--ui-text-scale, 1)); margin-block-end: .75rem; }
 .visit-directions ol { list-style: decimal; padding-inline-start: 1.5rem; }
 .visit-directions li + li { margin-block-start: .75rem; }
@@ -48,8 +50,10 @@
 .decision-buttons .button { flex: 1; min-height: 3rem; border-color: var(--color-primary); color: var(--color-ink); }
 .ask-why { margin-block-start: .25rem; }
 .ask-why-form { margin-block-start: 1rem; transform-origin: top left; }
-.ask-why-form:not([hidden]) { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.ask-why-form:not([hidden]) > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.ask-why-form:not([hidden]):not(.popup-closing) { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.ask-why-form:not([hidden]):not(.popup-closing) > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.ask-why-form.popup-closing { animation: popup-box-collapse 190ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both !important; overflow: hidden; pointer-events: none; }
+.ask-why-form.popup-closing > * { animation: popup-content-fade-out 100ms ease-in forwards !important; }
 .request-deadline { margin-block-start: .5rem; font-size: calc(.9375rem * var(--ui-text-scale, 1)); color: var(--color-muted); }
 .sharing-active { display: grid; grid-template-columns: 2.5rem minmax(0,1fr) auto; align-items: center; gap: .75rem; padding: 1rem; border-radius: var(--radius-md); background: var(--color-tint); }
 .sharing-mark { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--color-primary); color: var(--color-on-primary); }
@@ -76,12 +80,16 @@
 .summary-details { margin-block-start: .75rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: .5rem; }
 .summary-details summary, .record-details > summary { min-height: 3rem; padding-block: .5rem; color: var(--color-primary); cursor: pointer; }
 .summary-details > .stack { margin-block-start: .75rem; font-size: calc(1rem * var(--ui-text-scale, 1)); transform-origin: top left; }
-.summary-details[open] > .stack { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.summary-details[open] > .stack > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.summary-details[open]:not(.details-closing) > .stack { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.summary-details[open]:not(.details-closing) > .stack > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.summary-details.details-closing > .stack { animation: popup-box-collapse 190ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both !important; overflow: hidden; pointer-events: none; }
+.summary-details.details-closing > .stack > * { animation: popup-content-fade-out 100ms ease-in forwards !important; }
 .record-details { margin-block-start: 1.25rem; border-block-start: 1px solid var(--color-border-subtle); padding-block-start: .75rem; }
 .record-details > .stack { margin-block-start: 1rem; transform-origin: top left; }
-.record-details[open] > .stack { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.record-details[open] > .stack > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.record-details[open]:not(.details-closing) > .stack { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.record-details[open]:not(.details-closing) > .stack > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.record-details.details-closing > .stack { animation: popup-box-collapse 190ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both !important; overflow: hidden; pointer-events: none; }
+.record-details.details-closing > .stack > * { animation: popup-content-fade-out 100ms ease-in forwards !important; }
 .support-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
 .support-actions .button, .support-actions .text-link { font-size: calc(1rem * var(--ui-text-scale, 1)); }
 .audit-rows { list-style: none; padding: 0; margin: 0; }

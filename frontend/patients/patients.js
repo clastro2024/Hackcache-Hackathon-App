@@ -1,6 +1,6 @@
 import { api } from '../shared/api.js';
 import { session } from '../shared/session.js';
-import { mountHeader, createNotice, bindDialog, setFieldError, setText, announce, icon, localizeUI, showLoader, hideLoader } from '../shared/ui.js';
+import { mountHeader, createNotice, bindDialog, closeDetails, setFieldError, setText, announce, icon, localizeUI, showLoader, hideLoader } from '../shared/ui.js';
 
 showLoader();
 
@@ -428,7 +428,7 @@ for(const close of document.querySelectorAll('#close-registration, #queue-decisi
 get('register-patient').prepend(icon('plus'));
 content.addEventListener('keydown',event=>{
   const disclosure=event.target.closest('.row-more[open]');
-  if(event.key==='Escape' && disclosure) {event.preventDefault();disclosure.open=false;disclosure.querySelector('summary').focus();}
+  if(event.key==='Escape' && disclosure) {event.preventDefault();closeDetails(disclosure);disclosure.querySelector('summary').focus();}
 });
-document.addEventListener('pointerdown',event=>{for(const disclosure of content.querySelectorAll('.row-more[open]')) if(!disclosure.contains(event.target)) disclosure.open=false;});
+document.addEventListener('pointerdown',event=>{for(const disclosure of content.querySelectorAll('.row-more[open]')) if(!disclosure.contains(event.target)) closeDetails(disclosure);});
 header();void poll();

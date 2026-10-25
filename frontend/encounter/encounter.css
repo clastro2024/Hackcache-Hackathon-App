@@ -35,8 +35,10 @@
 .more-tools[open] > summary, .more-tools > summary:hover { background: var(--color-tint); }
 .more-tools[open] > summary::after { transform: rotate(180deg); }
 .tool-menu { position: absolute; inset-block-start: 100%; inset-inline-end: 0; z-index: 5; width: min(20rem, calc(100vw - 4rem)); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); padding: .5rem; box-shadow: var(--shadow-floating); gap: .25rem; transform-origin: top right; }
-.more-tools[open] > .tool-menu { animation: popup-box-expand 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.more-tools[open] > .tool-menu > * { animation: popup-content-fade-in 150ms ease-out 210ms both; }
+.more-tools[open]:not(.details-closing) > .tool-menu { animation: popup-box-expand 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.more-tools[open]:not(.details-closing) > .tool-menu > * { animation: popup-content-fade-in 150ms ease-out 210ms both; }
+.more-tools.details-closing > .tool-menu { animation: popup-box-collapse 190ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both !important; overflow: hidden; pointer-events: none; }
+.more-tools.details-closing > .tool-menu > * { animation: popup-content-fade-out 100ms ease-in forwards !important; }
 .tool-menu .field { padding: .75rem; }
 .visit-note { min-height: 9rem; }
 .assessment { min-height: 7rem; }

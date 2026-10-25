@@ -75,8 +75,10 @@
 .row-more > summary:hover { background: var(--color-tint); }
 .row-more[open] > summary { background: var(--color-tint); }
 .row-more .row-menu { position: absolute; inset-block-start: calc(100% + .375rem); inset-inline-end: 0; z-index: 15; width: min(19rem, calc(100vw - 4rem)); gap: .5rem; margin: 0; padding: .75rem; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-floating); transform-origin: top right; }
-.row-more[open] > .row-menu { animation: popup-box-expand 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.row-more[open] > .row-menu > * { animation: popup-content-fade-in 150ms ease-out 210ms both; }
+.row-more[open]:not(.details-closing) > .row-menu { animation: popup-box-expand 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.row-more[open]:not(.details-closing) > .row-menu > * { animation: popup-content-fade-in 150ms ease-out 210ms both; }
+.row-more.details-closing > .row-menu { animation: popup-box-collapse 190ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both !important; overflow: hidden; pointer-events: none; }
+.row-more.details-closing > .row-menu > * { animation: popup-content-fade-out 100ms ease-in forwards !important; }
 .current-menu { margin-block-start: .25rem; }
 .current-menu > summary { min-height: 2.25rem; margin-inline-end: -.9375rem; }
 .ledger-current .actions-cell { padding-block: .5rem; }
@@ -88,8 +90,10 @@
 .absent-section > summary::-webkit-details-marker { display: none; }
 .absent-chevron { width: 1.25rem; height: 1.25rem; transform: rotate(-90deg); }
 .absent-section[open] .absent-chevron { transform: none; }
-.absent-section[open] > .absent-rows { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: top left; }
-.absent-section[open] > .absent-rows > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.absent-section[open]:not(.details-closing) > .absent-rows { animation: popup-box-expand 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: top left; }
+.absent-section[open]:not(.details-closing) > .absent-rows > * { animation: popup-content-fade-in 150ms ease-out 230ms both; }
+.absent-section.details-closing > .absent-rows { animation: popup-box-collapse 190ms cubic-bezier(0.4, 0, 0.2, 1) 100ms both !important; overflow: hidden; pointer-events: none; transform-origin: top left; }
+.absent-section.details-closing > .absent-rows > * { animation: popup-content-fade-out 100ms ease-in forwards !important; }
 .absent-row { display: grid; grid-template-columns: var(--position-width) var(--token-width) var(--patient-width) var(--status-width) minmax(0, 1fr); align-items: center; min-height: 5rem; border-top: 1px solid var(--color-border-subtle); }
 .absent-row > .token { grid-column: 2; }
 .absent-row > .patient-name { grid-column: 3; }

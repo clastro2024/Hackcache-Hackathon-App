@@ -72,13 +72,40 @@ function live(item) {return (deadlines.get(item.consent_request_id || item.grant
 function scopes(values) {return values.map(value=>scopeLabels[value] ?? 'Unrecognized scope — ask staff before allowing').join(' · ');}
 function durationCopy(request) {const seconds=Math.min(900,Math.max(0,request.maximum_grant_seconds));return seconds>=900?'Up to 15 minutes for this visit.':`Up to ${Math.floor(seconds/60)} min ${seconds%60} sec for this visit.`;}
 function actionAllowed(item,action) {return live(item) && item.allowed_actions?.includes(action) && !working && !pending && !ended && !leaving;}
-function clearDirections() {
-  directionsGeneration+=1;get('visit-directions').hidden=true;get('directions-content').replaceChildren();
+let directionsClosingTimer = null;
+function clearDirections(immediate=false) {
+  directionsGeneration+=1;
+  const panel=get('visit-directions');
   get('show-directions').setAttribute('aria-expanded','false');
+  if(directionsClosingTimer) {
+    clearTimeout(directionsClosingTimer);
+    directionsClosingTimer=null;
+  }
+  if(immediate || panel.hidden) {
+    panel.classList.remove('popup-closing');
+    panel.hidden=true;
+    get('directions-content').replaceChildren();
+    return;
+  }
+  const trigger=get('show-directions');
+  if(trigger && typeof trigger.getBoundingClientRect==='function' && typeof panel.getBoundingClientRect==='function') {
+    const tRect=trigger.getBoundingClientRect();
+    const pRect=panel.getBoundingClientRect();
+    const originX=Math.round((tRect.left+tRect.width/2)-pRect.left);
+    const originY=Math.round((tRect.top+tRect.height/2)-pRect.top);
+    panel.style.transformOrigin=`${originX}px ${originY}px`;
+  }
+  panel.classList.add('popup-closing');
+  directionsClosingTimer=setTimeout(()=>{
+    panel.classList.remove('popup-closing');
+    panel.hidden=true;
+    get('directions-content').replaceChildren();
+    directionsClosingTimer=null;
+  }, 300);
 }
 function renderVisit() {
   const waiting=queued(),binding=waiting?JSON.stringify([visit.visit_id,visit.room_id,visit.destination?.node_id,visit.map_version]):'';
-  if(binding!==directionsBinding) {clearDirections();directionsBinding=binding;}
+  if(binding!==directionsBinding) {clearDirections(true);directionsBinding=binding;}
   get('queued-visit').hidden=!waiting;get('consultation-content').hidden=waiting;
   setText(get('visit-title'),waiting?'Today’s visit':'Your visit');
   setText(get('visit-reference'),waiting?'Fictional demo':`${visit?.public_token?`Visit ${visit.public_token} · `:''}Fictional demo`);
@@ -94,7 +121,21 @@ async function showDirections() {
   if(!get('visit-directions').hidden) {clearDirections();return;}
   const destination=visit.destination?.node_id;if(!destination) return;
   const epoch=generation,binding=directionsBinding,request=++directionsGeneration;
-  get('visit-directions').hidden=false;get('show-directions').setAttribute('aria-expanded','true');
+  if(directionsClosingTimer) {
+    clearTimeout(directionsClosingTimer);
+    directionsClosingTimer=null;
+  }
+  const panel=get('visit-directions');
+  const trigger=get('show-directions');
+  if(trigger && typeof trigger.getBoundingClientRect==='function' && typeof panel.getBoundingClientRect==='function') {
+    const tRect=trigger.getBoundingClientRect();
+    const pRect=panel.getBoundingClientRect();
+    const originX=Math.round((tRect.left+tRect.width/2)-pRect.left);
+    const originY=Math.round((tRect.top+tRect.height/2)-pRect.top);
+    panel.style.transformOrigin=`${originX}px ${originY}px`;
+  }
+  panel.classList.remove('popup-closing');
+  panel.hidden=false;get('show-directions').setAttribute('aria-expanded','true');
   get('directions-content').replaceChildren(node('p','muted','Loading sample directions…'));
   try {
     const value=await api.read('/navigation/route',{origin:'entrance',destination,accessibility:'STEP_FREE',language:document.documentElement.lang==='hi'?'hi':'en'});
@@ -121,9 +162,44 @@ function requestCard(request,index) {
   for(const [label,action] of [['Allow','ALLOW'],['Deny','DENY']]) if(request.allowed_actions.includes(action)) choices.append(button(label,()=>decide(request,action)));
   card.append(choices);
   if(request.allowed_actions.includes('ASK_WHY')) {
-    const ask=button('Ask why',()=>{form.hidden=!form.hidden;if(!form.hidden) input.focus();},'text-link ask-why');ask.setAttribute('aria-expanded','false');
-    const form=node('form','stack ask-why-form');form.hidden=true;form.id=`why-${index}`;ask.setAttribute('aria-controls',form.id);
-    ask.addEventListener('click',()=>ask.setAttribute('aria-expanded',String(!form.hidden)));
+    const form=node('form','stack ask-why-form');form.hidden=true;form.id=`why-${index}`;
+    let askWhyClosing = null;
+    const ask=button('Ask why',()=>{
+      if(askWhyClosing) {
+        clearTimeout(askWhyClosing);
+        askWhyClosing=null;
+      }
+      if(form.hidden) {
+        form.classList.remove('popup-closing');
+        form.hidden=false;
+        ask.setAttribute('aria-expanded','true');
+        if(typeof ask.getBoundingClientRect==='function' && typeof form.getBoundingClientRect==='function') {
+          const aRect=ask.getBoundingClientRect();
+          const fRect=form.getBoundingClientRect();
+          const originX=Math.round((aRect.left+aRect.width/2)-fRect.left);
+          const originY=Math.round((aRect.top+aRect.height/2)-fRect.top);
+          form.style.transformOrigin=`${originX}px ${originY}px`;
+        }
+        input.focus();
+      } else {
+        if(typeof ask.getBoundingClientRect==='function' && typeof form.getBoundingClientRect==='function') {
+          const aRect=ask.getBoundingClientRect();
+          const fRect=form.getBoundingClientRect();
+          const originX=Math.round((aRect.left+aRect.width/2)-fRect.left);
+          const originY=Math.round((aRect.top+aRect.height/2)-fRect.top);
+          form.style.transformOrigin=`${originX}px ${originY}px`;
+        }
+        form.classList.add('popup-closing');
+        ask.setAttribute('aria-expanded','false');
+        askWhyClosing=setTimeout(()=>{
+          form.classList.remove('popup-closing');
+          form.hidden=true;
+          askWhyClosing=null;
+        }, 300);
+      }
+    },'text-link ask-why');
+    ask.setAttribute('aria-expanded','false');
+    ask.setAttribute('aria-controls',form.id);
     const label=node('label','field-label','What would you like explained?'),input=node('textarea','field-control'),error=node('p','field-error');
     input.id=`why-note-${index}`;input.maxLength=500;input.rows=3;label.htmlFor=input.id;error.id=`why-error-${index}`;error.hidden=true;
     const send=button('Send question',()=>{});send.type='submit';form.noValidate=true;form.append(label,input,error,send);

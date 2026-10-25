@@ -88,21 +88,79 @@ export function setBusy(button,busy,label='Working…') {
 }
 
 let lastPointerSwitch = null;
+
+export function closeDetails(details, immediate = false) {
+  if (!details || !details.open) return;
+  if (immediate) {
+    details.classList.remove('details-closing');
+    details.removeAttribute('open');
+    return;
+  }
+  if (details.classList.contains('details-closing')) return;
+
+  const summary = details.querySelector('summary');
+  const popup = details.querySelector('.tool-menu, .row-menu, .stack, .absent-rows');
+  if (summary && popup && typeof summary.getBoundingClientRect === 'function' && typeof popup.getBoundingClientRect === 'function') {
+    const sRect = summary.getBoundingClientRect();
+    const pRect = popup.getBoundingClientRect();
+    const originX = Math.round((sRect.left + sRect.width / 2) - pRect.left);
+    const originY = Math.round((sRect.top + sRect.height / 2) - pRect.top);
+    popup.style.transformOrigin = `${originX}px ${originY}px`;
+  }
+
+  details.classList.add('details-closing');
+  setTimeout(() => {
+    details.classList.remove('details-closing');
+    details.removeAttribute('open');
+  }, 300);
+}
+
 if (typeof document !== 'undefined') {
   document.addEventListener('pointerdown', event => {
     const el = event.target.closest('button, [role="button"], summary, a, input, select');
     if (el) lastPointerSwitch = el;
+
+    for (const openDetails of document.querySelectorAll('details[open].more-tools, details[open].row-more')) {
+      if (!openDetails.contains(event.target)) {
+        closeDetails(openDetails);
+      }
+    }
   }, true);
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      const openDetails = document.querySelector('details[open].more-tools, details[open].row-more');
+      if (openDetails && !openDetails.classList.contains('details-closing')) {
+        event.preventDefault();
+        closeDetails(openDetails);
+        openDetails.querySelector('summary')?.focus();
+      }
+    }
+  });
 
   document.addEventListener('click', event => {
     const summary = event.target.closest('summary');
     if (!summary) return;
     const details = summary.closest('details');
     if (!details) return;
+
+    if (details.open) {
+      if (details.classList.contains('details-closing')) {
+        event.preventDefault();
+        return;
+      }
+      const popup = details.querySelector('.tool-menu, .row-menu, .stack, .absent-rows');
+      if (popup) {
+        event.preventDefault();
+        closeDetails(details);
+        return;
+      }
+    }
+
     setTimeout(() => {
       if (details.open) {
         const popup = details.querySelector('.tool-menu, .row-menu, .stack, .absent-rows');
-        if (popup) {
+        if (popup && typeof summary.getBoundingClientRect === 'function' && typeof popup.getBoundingClientRect === 'function') {
           const sRect = summary.getBoundingClientRect();
           const pRect = popup.getBoundingClientRect();
           const originX = Math.round((sRect.left + sRect.width / 2) - pRect.left);
@@ -117,10 +175,17 @@ if (typeof document !== 'undefined') {
 export function bindDisclosure(trigger,panel,{dismissOutside=false}={}) {
   if(!panel.id) throw new TypeError('Disclosure needs a stable panel ID');
   trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded',String(!panel.hidden));
+  let closingTimeout = null;
+
   const setOpen=open=>{
-    panel.hidden=!open;
-    trigger.setAttribute('aria-expanded',String(open));
+    if (closingTimeout) {
+      clearTimeout(closingTimeout);
+      closingTimeout = null;
+    }
     if (open) {
+      panel.classList.remove('popup-dropdown-closing');
+      panel.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
       if (trigger && typeof trigger.getBoundingClientRect === 'function') {
         const tRect = trigger.getBoundingClientRect();
         const pRect = panel.getBoundingClientRect();
@@ -132,44 +197,113 @@ export function bindDisclosure(trigger,panel,{dismissOutside=false}={}) {
       void panel.offsetWidth;
       panel.classList.add('popup-dropdown-animating');
     } else {
+      if (panel.hidden) return;
+      if (trigger && typeof trigger.getBoundingClientRect === 'function') {
+        const tRect = trigger.getBoundingClientRect();
+        const pRect = panel.getBoundingClientRect();
+        const originX = Math.round((tRect.left + tRect.width / 2) - pRect.left);
+        const originY = Math.round((tRect.top + tRect.height / 2) - pRect.top);
+        panel.style.transformOrigin = `${originX}px ${originY}px`;
+      }
       panel.classList.remove('popup-dropdown-animating');
+      panel.classList.add('popup-dropdown-closing');
+      trigger.setAttribute('aria-expanded', 'false');
+      closingTimeout = setTimeout(() => {
+        panel.classList.remove('popup-dropdown-closing');
+        panel.hidden = true;
+        closingTimeout = null;
+      }, 300);
     }
   };
-  const click=()=>setOpen(panel.hidden);
-  const key=event=>{if(event.key==='Escape' && !panel.hidden) {event.preventDefault();setOpen(false);trigger.focus();}};
+  const click=()=>setOpen(panel.hidden || panel.classList.contains('popup-dropdown-closing'));
+  const key=event=>{if(event.key==='Escape' && (!panel.hidden || panel.classList.contains('popup-dropdown-closing'))) {event.preventDefault();setOpen(false);trigger.focus();}};
   const outside=event=>{if(dismissOutside && !panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) setOpen(false);};
   trigger.addEventListener('click',click);panel.addEventListener('keydown',key);trigger.addEventListener('keydown',key);
   document.addEventListener('pointerdown',outside);
   return {open:()=>setOpen(true),close:()=>setOpen(false),destroy(){
+    if (closingTimeout) {
+      clearTimeout(closingTimeout);
+      closingTimeout = null;
+    }
     trigger.removeEventListener('click',click);panel.removeEventListener('keydown',key);trigger.removeEventListener('keydown',key);
-    document.removeEventListener('pointerdown',outside);setOpen(false);
+    document.removeEventListener('pointerdown',outside);
+    panel.classList.remove('popup-dropdown-animating', 'popup-dropdown-closing');
+    panel.hidden = true;
   }};
 }
 
 export function bindDialog(dialog,{dismissible=true}={}) {
   let returnFocus;
+  let closingTimeout = null;
+  const nativeClose = typeof dialog.close === 'function' ? dialog.close.bind(dialog) : () => {};
+
   const closed=()=>{
-    dialog.classList.remove('dialog-animating', 'dialog-opened');
+    if (closingTimeout) {
+      clearTimeout(closingTimeout);
+      closingTimeout = null;
+    }
+    dialog.classList.remove('dialog-animating', 'dialog-opened', 'dialog-closing');
     document.documentElement.classList.remove('has-dialog');
     if(returnFocus?.isConnected) returnFocus.focus();
   };
-  const cancelled=event=>{if(!dismissible) event.preventDefault();};
+
+  const animateClose = (callback) => {
+    if (!dialog.open) return;
+    if (dialog.classList.contains('dialog-closing')) return;
+    dialog.classList.remove('dialog-animating', 'dialog-opened');
+    dialog.classList.add('dialog-closing');
+
+    closingTimeout = setTimeout(() => {
+      dialog.classList.remove('dialog-closing');
+      closingTimeout = null;
+      if (dialog.open) nativeClose();
+      if (typeof callback === 'function') callback();
+    }, 320);
+  };
+
+  const cancelled=event=>{
+    event.preventDefault();
+    if(dismissible) animateClose();
+  };
+
   const clicked=event=>{
-    if(event.target.closest('[data-dialog-close]') && dismissible) dialog.close();
-    else if(event.target===dialog && dismissible) {
+    if(event.target.closest('[data-dialog-close]') && dismissible) {
+      event.preventDefault();
+      animateClose();
+    } else if(event.target===dialog && dismissible) {
       const rect=dialog.getBoundingClientRect();
-      if(event.clientX<rect.left || event.clientX>rect.right || event.clientY<rect.top || event.clientY>rect.bottom) dialog.close();
+      if(event.clientX<rect.left || event.clientX>rect.right || event.clientY<rect.top || event.clientY>rect.bottom) {
+        event.preventDefault();
+        animateClose();
+      }
     }
   };
+
   dialog.addEventListener('close',closed);dialog.addEventListener('cancel',cancelled);dialog.addEventListener('click',clicked);
+
+  dialog.close = function(returnValue) {
+    if (!dialog.open) return;
+    if (dialog.classList.contains('dialog-closing')) {
+      if (returnValue !== undefined) dialog.returnValue = returnValue;
+      return;
+    }
+    animateClose(() => {
+      if (returnValue !== undefined) dialog.returnValue = returnValue;
+    });
+  };
+
   return {open(trigger=document.activeElement){
     if(document.querySelector('dialog[open]')) return false;
+    if (closingTimeout) {
+      clearTimeout(closingTimeout);
+      closingTimeout = null;
+    }
     returnFocus=trigger;
     const switchEl = (trigger && trigger instanceof Element && trigger.isConnected)
       ? trigger
       : (lastPointerSwitch && lastPointerSwitch.isConnected ? lastPointerSwitch : document.activeElement);
 
-    dialog.classList.remove('dialog-animating', 'dialog-opened');
+    dialog.classList.remove('dialog-animating', 'dialog-opened', 'dialog-closing');
     dialog.showModal();
     document.documentElement.classList.add('has-dialog');
 
@@ -185,7 +319,7 @@ export function bindDialog(dialog,{dismissible=true}={}) {
 
     dialog.classList.add('dialog-animating');
     setTimeout(() => {
-      if (dialog.open) {
+      if (dialog.open && !dialog.classList.contains('dialog-closing')) {
         dialog.classList.remove('dialog-animating');
         dialog.classList.add('dialog-opened');
       }
@@ -193,9 +327,14 @@ export function bindDialog(dialog,{dismissible=true}={}) {
 
     (dialog.querySelector('[data-initial-focus]') ?? dialog.querySelector('button, input, select, textarea, a[href]'))?.focus();
     return true;
-  },close:()=>dialog.close(),destroy(){
-    if(dialog.open) {dialog.close();closed();}
+  },close:()=>animateClose(),destroy(){
+    if (closingTimeout) {
+      clearTimeout(closingTimeout);
+      closingTimeout = null;
+    }
+    if(dialog.open) {nativeClose();closed();}
     dialog.removeEventListener('close',closed);dialog.removeEventListener('cancel',cancelled);dialog.removeEventListener('click',clicked);
+    dialog.close = nativeClose;
   }};
 }
 
@@ -271,13 +410,30 @@ export function mountHeader(target,{area='provider',page='patients',accountLabel
       tooltip.id=`${prefix}-sign-out-help`;tooltip.setAttribute('role','tooltip');tooltip.hidden=true;
       info.type='button';info.setAttribute('aria-label','About signing out');info.setAttribute('aria-controls',tooltip.id);info.setAttribute('aria-expanded','false');info.append(icon('info'));
       signOut.setAttribute('aria-describedby',tooltip.id);info.setAttribute('aria-describedby',tooltip.id);
-      let dismissed=false,pinned=false,hideTimer;
-      const show=()=>{if(!dismissed){tooltip.hidden=false;info.setAttribute('aria-expanded','true');}},hide=()=>{tooltip.hidden=true;info.setAttribute('aria-expanded','false');};
+      let dismissed=false,pinned=false,hideTimer,closingTooltipTimer;
+      const show=()=>{
+        if(closingTooltipTimer) { clearTimeout(closingTooltipTimer); closingTooltipTimer=null; }
+        if(!dismissed){
+          tooltip.classList.remove('popup-closing');
+          tooltip.hidden=false;
+          info.setAttribute('aria-expanded','true');
+        }
+      };
+      const hide=()=>{
+        if(tooltip.hidden || tooltip.classList.contains('popup-closing')) return;
+        tooltip.classList.add('popup-closing');
+        info.setAttribute('aria-expanded','false');
+        closingTooltipTimer=setTimeout(()=>{
+          tooltip.classList.remove('popup-closing');
+          tooltip.hidden=true;
+          closingTooltipTimer=null;
+        }, 180);
+      };
       wrapper.addEventListener('mouseenter',()=>{clearTimeout(hideTimer);dismissed=false;show();});wrapper.addEventListener('mouseleave',()=>{hideTimer=setTimeout(()=>{if(!pinned&&!wrapper.matches(':hover')&&!wrapper.contains(document.activeElement))hide();},180);});
       wrapper.addEventListener('focusin',show);wrapper.addEventListener('focusout',event=>{if(!wrapper.contains(event.relatedTarget)){hide();dismissed=false;}});
       info.addEventListener('click',()=>{dismissed=false;pinned=!pinned;if(pinned)show();else hide();});
       wrapper.addEventListener('keydown',event=>{if(event.key==='Escape'&&!tooltip.hidden){event.preventDefault();event.stopPropagation();dismissed=true;pinned=false;hide();}});
-      cleanups.push(()=>clearTimeout(hideTimer));
+      cleanups.push(()=>{clearTimeout(hideTimer);if(closingTooltipTimer)clearTimeout(closingTooltipTimer);});
       wrapper.append(signOut,info,tooltip);menu.append(wrapper);
     } else menu.append(signOut);
   } else {const signIn=element('a','menu-action','Sign in');signIn.href='../login/';signIn.prepend(icon('person'));menu.append(signIn);}
