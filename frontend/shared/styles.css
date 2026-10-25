@@ -273,6 +273,78 @@ body:has(.vellum-loader-overlay:not(.is-hidden)) #main-content:not(.workspace-en
   transform: none !important;
 }
 
+/* Pop up boxes expanding from size zero at the switch to optimal box size */
+@keyframes popup-box-expand {
+  0% {
+    transform: scale(0);
+    opacity: 0.1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Contents transition from transparent to visible when the box is fully open */
+@keyframes popup-content-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-backdrop-fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+dialog[open],
+dialog.dialog-animating {
+  animation: popup-box-expand 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+dialog.dialog-animating {
+  overflow: hidden;
+}
+
+dialog[open]::backdrop {
+  animation: dialog-backdrop-fade 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+dialog.dialog-animating > *,
+dialog[open]:not(.dialog-opened) > * {
+  animation: popup-content-fade-in 170ms ease-out 240ms both;
+}
+
+dialog.dialog-opened > * {
+  opacity: 1;
+}
+
+.popup-dropdown-animating,
+.account-menu:not([hidden]) {
+  animation: popup-box-expand 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.popup-dropdown-animating > *,
+.account-menu:not([hidden]) > * {
+  animation: popup-content-fade-in 150ms ease-out 210ms both;
+}
+
+.sign-out-tooltip:not([hidden]) {
+  animation: popup-box-expand 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top right;
+}
+
+.sign-out-tooltip:not([hidden]) > * {
+  animation: popup-content-fade-in 150ms ease-out 190ms both;
+}
+
 @media (max-width: 40rem) {
   .shell-bar { flex-wrap: wrap; gap: var(--space-3); padding-inline: var(--space-4); }
   .shell-identity, .shell-account { gap: var(--space-3); }

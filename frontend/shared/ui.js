@@ -87,10 +87,54 @@ export function setBusy(button,busy,label='Working…') {
   }
 }
 
+let lastPointerSwitch = null;
+if (typeof document !== 'undefined') {
+  document.addEventListener('pointerdown', event => {
+    const el = event.target.closest('button, [role="button"], summary, a, input, select');
+    if (el) lastPointerSwitch = el;
+  }, true);
+
+  document.addEventListener('click', event => {
+    const summary = event.target.closest('summary');
+    if (!summary) return;
+    const details = summary.closest('details');
+    if (!details) return;
+    setTimeout(() => {
+      if (details.open) {
+        const popup = details.querySelector('.tool-menu, .row-menu, .stack, .absent-rows');
+        if (popup) {
+          const sRect = summary.getBoundingClientRect();
+          const pRect = popup.getBoundingClientRect();
+          const originX = Math.round((sRect.left + sRect.width / 2) - pRect.left);
+          const originY = Math.round((sRect.top + sRect.height / 2) - pRect.top);
+          popup.style.transformOrigin = `${originX}px ${originY}px`;
+        }
+      }
+    }, 0);
+  }, true);
+}
+
 export function bindDisclosure(trigger,panel,{dismissOutside=false}={}) {
   if(!panel.id) throw new TypeError('Disclosure needs a stable panel ID');
   trigger.setAttribute('aria-controls',panel.id);trigger.setAttribute('aria-expanded',String(!panel.hidden));
-  const setOpen=open=>{panel.hidden=!open;trigger.setAttribute('aria-expanded',String(open));};
+  const setOpen=open=>{
+    panel.hidden=!open;
+    trigger.setAttribute('aria-expanded',String(open));
+    if (open) {
+      if (trigger && typeof trigger.getBoundingClientRect === 'function') {
+        const tRect = trigger.getBoundingClientRect();
+        const pRect = panel.getBoundingClientRect();
+        const originX = Math.round((tRect.left + tRect.width / 2) - pRect.left);
+        const originY = Math.round((tRect.top + tRect.height / 2) - pRect.top);
+        panel.style.transformOrigin = `${originX}px ${originY}px`;
+      }
+      panel.classList.remove('popup-dropdown-animating');
+      void panel.offsetWidth;
+      panel.classList.add('popup-dropdown-animating');
+    } else {
+      panel.classList.remove('popup-dropdown-animating');
+    }
+  };
   const click=()=>setOpen(panel.hidden);
   const key=event=>{if(event.key==='Escape' && !panel.hidden) {event.preventDefault();setOpen(false);trigger.focus();}};
   const outside=event=>{if(dismissOutside && !panel.hidden && !panel.contains(event.target) && !trigger.contains(event.target)) setOpen(false);};
@@ -104,7 +148,11 @@ export function bindDisclosure(trigger,panel,{dismissOutside=false}={}) {
 
 export function bindDialog(dialog,{dismissible=true}={}) {
   let returnFocus;
-  const closed=()=>{document.documentElement.classList.remove('has-dialog');if(returnFocus?.isConnected) returnFocus.focus();};
+  const closed=()=>{
+    dialog.classList.remove('dialog-animating', 'dialog-opened');
+    document.documentElement.classList.remove('has-dialog');
+    if(returnFocus?.isConnected) returnFocus.focus();
+  };
   const cancelled=event=>{if(!dismissible) event.preventDefault();};
   const clicked=event=>{
     if(event.target.closest('[data-dialog-close]') && dismissible) dialog.close();
@@ -116,7 +164,33 @@ export function bindDialog(dialog,{dismissible=true}={}) {
   dialog.addEventListener('close',closed);dialog.addEventListener('cancel',cancelled);dialog.addEventListener('click',clicked);
   return {open(trigger=document.activeElement){
     if(document.querySelector('dialog[open]')) return false;
-    returnFocus=trigger;dialog.showModal();document.documentElement.classList.add('has-dialog');
+    returnFocus=trigger;
+    const switchEl = (trigger && trigger instanceof Element && trigger.isConnected)
+      ? trigger
+      : (lastPointerSwitch && lastPointerSwitch.isConnected ? lastPointerSwitch : document.activeElement);
+
+    dialog.classList.remove('dialog-animating', 'dialog-opened');
+    dialog.showModal();
+    document.documentElement.classList.add('has-dialog');
+
+    if (switchEl && typeof switchEl.getBoundingClientRect === 'function') {
+      const tRect = switchEl.getBoundingClientRect();
+      const dRect = dialog.getBoundingClientRect();
+      const originX = Math.round((tRect.left + tRect.width / 2) - dRect.left);
+      const originY = Math.round((tRect.top + tRect.height / 2) - dRect.top);
+      dialog.style.transformOrigin = `${originX}px ${originY}px`;
+    } else {
+      dialog.style.transformOrigin = 'center center';
+    }
+
+    dialog.classList.add('dialog-animating');
+    setTimeout(() => {
+      if (dialog.open) {
+        dialog.classList.remove('dialog-animating');
+        dialog.classList.add('dialog-opened');
+      }
+    }, 450);
+
     (dialog.querySelector('[data-initial-focus]') ?? dialog.querySelector('button, input, select, textarea, a[href]'))?.focus();
     return true;
   },close:()=>dialog.close(),destroy(){
