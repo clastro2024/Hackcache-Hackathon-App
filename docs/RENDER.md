@@ -86,6 +86,8 @@ Admission accepts enabled text with a configured server key. It does not claim a
 
 The cooperative database lease refuses maintenance while a live/unknown owner holds it. Render's disk is available only at runtime, not build/pre-deploy/one-off jobs. For this candidate, deliberately deploy with a temporary maintenance Start Command. The disk-backed old instance stops before the new instance uses the disk; the command completes maintenance before starting the listener. Expect downtime. [Disk lifecycle limitations](https://render.com/docs/disks#disk-limitations-and-considerations).
 
+Render leases use the platform instance ID and Linux process identity so that an older container's persisted PID cannot block replacement startup. The server and stopped-maintenance entrypoints in the same instance still share one lease. Historical lease files are retained; no database reset or manual lock deletion is required. See [startup troubleshooting](RENDER_TROUBLESHOOTING.md).
+
 Example temporary Start Commands:
 
 ```text

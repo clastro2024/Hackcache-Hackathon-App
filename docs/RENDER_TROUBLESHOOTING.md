@@ -1,5 +1,15 @@
 # Render initialization errors
 
+## MAINTENANCE_LOCKED after a redeploy
+
+The older PID-only file lease could mistake a reused PID in a replacement container for the previous database owner. Removing the bootstrap password file does not cause this error. Current Render leases are scoped to the platform's `RENDER_INSTANCE_ID`, and Linux process start/boot/namespace identity distinguishes a reused PID within that scope. Live or unknown same-instance owners remain refused; no process is killed by lease recovery.
+
+This cross-instance scope relies on Render's documented guarantee that only one instance can access a persistent disk and that the previous disk-backed instance stops before replacement. Historical lease files are left intact and are not database files. Local/non-Render lease paths remain unchanged. Do not set/spoof `RENDER_INSTANCE_ID` yourself or use this scheme for multiple containers sharing a filesystem on another platform.
+
+Redeploy the fixed commit using `npm run deploy:start`, keeping the existing database path and disk. Do not initialize again, recreate the disk, or delete SQLite/WAL/SHM files. Platform behavior still needs confirmation on the hosted service. [Disk lifecycle](https://render.com/docs/disks#disk-limitations-and-considerations), [instance identity](https://render.com/docs/environment-variables#render_instance_id).
+
+## Bootstrap input errors
+
 Build success followed by `INVALID_PRIVATE_INPUT` in an older deployment means the bootstrap reader refused the secret file or its JSON. It does not identify the cause. `.env not found` is harmless when Render supplies environment variables.
 
 The current reader supports regular/projected files at the fixed Render paths for `vellum-passwords.json`, the legacy `vaultmed-passwords.json`, and `sarvam-free-access.json`. Ordinary local linked inputs remain refused. Reads retain byte bounds and descriptor/file-identity checks; file contents are never included in diagnostics. A mounted link is a possible cause of the older error, not a confirmed property of a particular failed deployment.

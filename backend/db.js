@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync,
-  realpathSync, unlinkSync, writeFileSync } from 'node:fs';
+  realpathSync, readlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { types } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -167,11 +167,29 @@ export function privatePath(value, { createParents = false, existing = false } =
   return file;
 }
 
-// Cooperative per-file process lease shared by server and maintenance entrypoints.
-// Stale dead-process leases may be removed; live/unknown owners are never killed.
+function linuxProcessIdentity(pid) {
+  if(process.platform!=='linux')return null;
+  try {
+    const stat=readFileSync(`/proc/${pid}/stat`,'utf8');
+    const start=stat.slice(stat.lastIndexOf(')')+2).trim().split(/\s+/u)[19];
+    if(!/^\d+$/u.test(start))return null;
+    const identity={start_ticks:start};
+    try {identity.boot_id=readFileSync('/proc/sys/kernel/random/boot_id','utf8').trim();}catch{}
+    try {identity.pid_namespace=readlinkSync(`/proc/${pid}/ns/pid`);}catch{}
+    return identity;
+  }catch{return null;}
+}
+
+// A Render disk has one instance at a time; PIDs from older instances are unrelated.
+// All current-instance server/maintenance processes share the same scoped lease.
+// Local files keep the original lease path. Live/unknown owners are never killed.
 export function acquireLease(file) {
-  const lock = `${file}.lock`;
-  const token = JSON.stringify({ pid: process.pid, nonce: randomUUID() });
+  const instance=process.env.RENDER==='true'?process.env.RENDER_INSTANCE_ID:null;
+  requireStorage(instance===null || (typeof instance==='string'&&/^[A-Za-z0-9_-]{1,128}$/u.test(instance)), 'INVALID_RUNTIME_INSTANCE');
+  const lock = instance?`${file}.${instance}.lock`:`${file}.lock`;
+  const identity=linuxProcessIdentity(process.pid);
+  requireStorage(!instance || identity!==null,'LEASE_IDENTITY_UNAVAILABLE');
+  const token = JSON.stringify({ pid: process.pid, nonce: randomUUID(),...(identity?{identity}:{}) });
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const handle = openSync(lock, 'wx', 0o600);
@@ -181,12 +199,18 @@ export function acquireLease(file) {
       };
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      requireStorage(!lstatSync(lock).isSymbolicLink() && lstatSync(lock).size <= 256, 'MAINTENANCE_LOCKED');
+      const stat=lstatSync(lock);
+      requireStorage(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 512, 'MAINTENANCE_LOCKED');
       let owner;
       try { owner = JSON.parse(readFileSync(lock, 'utf8')); } catch { throw new StorageError('MAINTENANCE_LOCKED'); }
       requireStorage(Number.isSafeInteger(owner.pid) && owner.pid > 0 && typeof owner.nonce === 'string', 'MAINTENANCE_LOCKED');
       let dead = false;
       try { process.kill(owner.pid, 0); } catch (failure) { dead = failure.code === 'ESRCH'; }
+      if(!dead && owner.identity && /^\d+$/u.test(owner.identity.start_ticks ?? '')) {
+        const actual=linuxProcessIdentity(owner.pid);
+        if(actual)dead=actual.start_ticks!==owner.identity.start_ticks ||
+          ['boot_id','pid_namespace'].some(key=>typeof owner.identity[key]==='string'&&typeof actual[key]==='string'&&owner.identity[key]!==actual[key]);
+      }
       requireStorage(dead, 'MAINTENANCE_LOCKED');
       // Do not unlink a lease replaced since it was inspected.
       if (readFileSync(lock, 'utf8') === JSON.stringify(owner)) unlinkSync(lock);
